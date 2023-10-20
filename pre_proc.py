@@ -95,11 +95,14 @@ df['SO2_AQI_label'] = np.select([df['SO2 AQI'].between(0,50),
                                  df['SO2 AQI'].between(201,300)]
                                 ,air_qual)
 
+
 """
 ==========================================
 Highest AQI Value is the actual AQI value.
 ==========================================
 """
+"New Feature Name: Chosen AQI"
+"AQI value is chosen from the max AQI value of the 3."
 
 
 
@@ -110,8 +113,8 @@ Might Add this as a Feature
 ===========================
 """
 
-holidays = ["New_Years", 'Memorial_Day',"Independence_Day","Labor_Day","Thanksgiving","Christmas"]
-"Forecast Increase Rate of Change. Per Year"
+holidays = ["New_Years", 'Memorial_Day', "Independence_Day", "Labor_Day", "Thanksgiving", "Christmas"]
+
 
 """
 Ratio of Pollutants: 
