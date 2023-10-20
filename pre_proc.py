@@ -1,15 +1,32 @@
 import pandas as pd
 import numpy as np
-read = 'pollution_2000_2022.csv'
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
 
+"""
+======================
+Micah Harlan
+This file cleans the read in data 
+and adds some features to it 
+to make it more useful for ML
+======================
+"""
+
+
+read = 'pollution_2000_2022.csv'
 df = pd.read_csv(read)
 df.drop(columns=['Unnamed: 0'],inplace=True)
+
+
 
 air_qual = ['Good','Moderate','Unhealthy for Sensitive Groups','Unhealthy','Very Unhealthy']
 ranges = [(0,50),(51,100),(101,150),(151,200),(201,300)]
 
 temp = df['O3 AQI']
 O3_AQI_class = pd.DataFrame()
+
+
 
 "PPM = Parts Per Million"
 "PPB = Parts Per Billion"
@@ -24,15 +41,19 @@ Adding AQI Labels from these Sources Below.
 "https://document.airnow.gov"
 ===============
 """
-
 df.drop_duplicates(inplace=True)
 df['Date'] = pd.to_datetime(df['Date'])
 df['Month'] = df['Date'].dt.month
 df['Year'] = df['Date'].dt.year
 
-#df = df.groupby(['State','Date','County']).mean()
+#df = df.groupby(['State','Date','County']).mean(numeric_only=True)
 #df.reset_index(inplace=True)
 
+"""
+======================
+Adding Seasons
+======================
+"""
 df['Season'] = np.select([df['Month'].between(3,5),
                         df['Month'].between(6,8),
                         df['Month'].between(9,11),
@@ -41,6 +62,11 @@ df['Season'] = np.select([df['Month'].between(3,5),
                          ['Spring','Summer','Fall','Winter','Winter']
                          )
 
+"""
+======================
+Adding the AQI labels
+======================
+"""
 df['N02_AQI_label'] = np.select([df['NO2 AQI'].between(0,50),
                                  df['NO2 AQI'].between(51,100),
                                  df['NO2 AQI'].between(101,150),
@@ -69,10 +95,23 @@ df['SO2_AQI_label'] = np.select([df['SO2 AQI'].between(0,50),
                                  df['SO2 AQI'].between(201,300)]
                                 ,air_qual)
 
+"""
+==========================================
+Highest AQI Value is the actual AQI value.
+==========================================
+"""
 
 
+
+
+"""
+===========================
+Might Add this as a Feature
+===========================
+"""
+
+holidays = ["New_Years", 'Memorial_Day',"Independence_Day","Labor_Day","Thanksgiving","Christmas"]
 "Forecast Increase Rate of Change. Per Year"
-
 
 """
 Ratio of Pollutants: 
@@ -81,6 +120,23 @@ like O3/NO2 or CO/SO2,
 to explore potential interactions between pollutants.
 """
 
+"""
+======================
+Down Sampling (Maybe)
+======================
+"""
 
-'Year, Season, Month'
-'Federal Holiday T or F' 'MAYBE'
+
+
+
+
+
+"""
+========================
+Dimensionality Reduction
+========================
+"""
+
+
+
+
