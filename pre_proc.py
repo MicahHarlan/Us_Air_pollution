@@ -3,6 +3,11 @@ import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.preprocessing import LabelEncoder
+from imblearn.under_sampling import RandomUnderSampler
 
 """
 ======================
@@ -63,6 +68,22 @@ df['Season'] = np.select([df['Month'].between(3,5),
                          )
 
 """
+==========================================
+Highest AQI Value is the actual AQI value.
+==========================================
+"""
+"New Feature Name: Chosen AQI"
+"AQI value is chosen from the max AQI value of the 3."
+df['AQI'] = df[['O3 AQI','CO AQI','SO2 AQI','NO2 AQI']].max(axis=1)
+
+df['Y'] = df['AQI'].shift(-1)
+df.drop(df.tail(1).index,inplace=True)
+
+
+
+
+
+"""
 ======================
 Adding the AQI labels
 ======================
@@ -95,25 +116,23 @@ df['SO2_AQI_label'] = np.select([df['SO2 AQI'].between(0,50),
                                  df['SO2 AQI'].between(201,300)]
                                 ,air_qual)
 
-
-"""
-==========================================
-Highest AQI Value is the actual AQI value.
-==========================================
-"""
-"New Feature Name: Chosen AQI"
-"AQI value is chosen from the max AQI value of the 3."
+df['classification'] = np.select([df['Y'].between(0,50),
+                                 df['Y'].between(51,100),
+                                 df['Y'].between(101,150),
+                                 df['Y'].between(151,200),
+                                 df['Y'].between(201,300)]
+                                ,air_qual)
 
 
 
 
-"""
-===========================
-Might Add this as a Feature
-===========================
-"""
-
-holidays = ["New_Years", 'Memorial_Day', "Independence_Day", "Labor_Day", "Thanksgiving", "Christmas"]
+"""temp_df = df.groupby(['Year','Season'
+                      ]).mean(numeric_only=True)
+temp_df.reset_index(inplace=True)
+plt.figure()
+plt.tight_layout()
+plt.plot(temp_df['Year'],temp_df['CO Mean'])
+plt.show()"""
 
 
 """
@@ -123,11 +142,6 @@ like O3/NO2 or CO/SO2,
 to explore potential interactions between pollutants.
 """
 
-"""
-======================
-Down Sampling (Maybe)
-======================
-"""
 
 
 
@@ -142,4 +156,64 @@ Dimensionality Reduction
 
 
 
+X = df.drop(columns=['classification','Address','Date'])
+rus = RandomUnderSampler()
+#X,y = rus.fit_resample(X,df['classification'])
 
+y = X['Y']
+X.drop(columns=['Y'],inplace=True)
+
+le = LabelEncoder()
+
+le.fit(X['State'])
+X['State'] = le.fit_transform(X['State'])
+
+le.fit(X['County'])
+X['County'] = le.fit_transform(X['County'])
+
+le.fit(X['City'])
+X['City'] = le.fit_transform(X['City'])
+
+le.fit(X['Season'])
+X['Season'] = le.fit_transform(X['Season'])
+
+le.fit(X['N02_AQI_label'])
+X['N02_AQI_label'] = le.fit_transform(X['N02_AQI_label'])
+
+le.fit(X['O3_AQI_label'])
+X['O3_AQI_label'] = le.fit_transform(X['O3_AQI_label'])
+
+le.fit(X['CO_AQI_label'])
+X['CO_AQI_label'] = le.fit_transform(X['CO_AQI_label'])
+
+le.fit(X['SO2_AQI_label'])
+X['SO2_AQI_label'] = le.fit_transform(X['SO2_AQI_label'])
+
+
+"""
+======================
+Down Sampling
+======================
+"""
+sns.countplot(x=df['AQI'],data=df)
+plt.title('Countplot of Target')
+plt.tight_layout()
+plt.show()
+
+
+
+
+
+rf = RandomForestRegressor()
+X_train,X_test,y_train,y_test = train_test_split(X,y,shuffle=False,test_size=.2 )
+rf.fit(X_train,y_train)
+importances = rf.feature_importances_
+features = X.columns
+indices = np.argsort(importances)
+plt.title('Feature Importance')
+plt.barh(range(len(indices)),importances[indices],color='b',align='center')
+plt.yticks(range(len(indices)),[features[i] for i in indices])
+plt.xlabel('Relative Importance.')
+plt.tight_layout()
+plt.legend()
+plt.show()
