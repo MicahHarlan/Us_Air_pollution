@@ -8,10 +8,10 @@ import seaborn as sns
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import mean_squared_error
-
-
-
 from sklearn.decomposition import PCA
+import statsmodels.api as sm
+from sklearn.preprocessing import Normalizer
+from statsmodels.stats.outliers_influence import variance_inflation_factor
 
 """
 ======================
@@ -31,13 +31,6 @@ df.drop(columns=['Unnamed: 0'],inplace=True)
 Number of Observations
 ======================
 """
-#n = 575000
-#test_n = 640000
-#df = df.iloc[n:,:]
-
-
-
-
 
 
 air_qual = ['Good','Moderate','Unhealthy for Sensitive Groups','Unhealthy','Very Unhealthy']
@@ -46,7 +39,17 @@ ranges = [(0,50),(51,100),(101,150),(151,200),(201,300)]
 temp = df['O3 AQI']
 O3_AQI_class = pd.DataFrame()
 
+removed_states = ['Alabama','Alabama', 'Arizona', 'Arkansas', 'California', 'Colorado'
+    ,'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Kansas', 'Louisiana','Michigan',
+                  'Minnesota', 'Missouri','Nevada', 'New Mexico',
+                  'North Dakota','Ohio','Oklahoma', 'Oregon', 'South Dakota', 'Tennessee',
+                  'Texas', 'Utah','Washington', 'Wisconsin','Wyoming']
 
+for s in removed_states:
+    df = df[(df['State'] != s)]
+
+
+print(len(df))
 
 "PPM = Parts Per Million"
 "PPB = Parts Per Billion"
@@ -61,6 +64,7 @@ Adding AQI Labels from these Sources Below.
 "https://document.airnow.gov"
 ===============
 """
+df = df.dropna()
 df.drop_duplicates(inplace=True)
 df['Date'] = pd.to_datetime(df['Date'])
 df['Month'] = df['Date'].dt.month
@@ -171,7 +175,12 @@ plt.show()
 print(df.describe())
 print(df.isna().sum())
 
-df = df[(df['Date'] >= '2019-01-01')]
+"""
+Setting Date to 2019
+"""
+df = df[(df['Date'] >= '2017-01-01')]
+print(len(df))
+#df = df[(df['Date'] >= '2022-06-01')]
 
 
 """
@@ -179,15 +188,7 @@ df = df[(df['Date'] >= '2019-01-01')]
 Dimensionality Reduction
 ========================
 """
-print(df[['AQI','Y']])
-
-#df.set_index(df['Date'],inplace=True)
-
 X = df.drop(columns=['classification','Address','Date'])
-
-y = X['Y']
-X.drop(columns=['Y','County','State'],inplace=True)
-
 
 le = LabelEncoder()
 le.fit(X['NO2_AQI_label'])
@@ -205,20 +206,42 @@ numerical = [ 'O3 Mean',
        'SO2 1st Max Value', 'SO2 1st Max Hour', 'SO2 AQI', 'NO2 Mean',
        'NO2 1st Max Value', 'NO2 1st Max Hour', 'NO2 AQI','AQI']
 
+norm = Normalizer()
+norm.fit(X['Year'].to_numpy().reshape(len(X['Year']),-1))
+X['Year'] = norm.fit_transform(X['Year'].to_numpy().reshape(len(X['Year']),-1))
 
+norm.fit(X['Month'].to_numpy().reshape(len(X['Month']),-1))
+X['Month'] = norm.fit_transform(X['Month'].to_numpy().reshape(len(X['Month']),-1))
+
+norm.fit(X['Day'].to_numpy().reshape(len(X['Day']),-1))
+X['Day'] = norm.fit_transform(X['Day'].to_numpy().reshape(len(X['Day']),-1))
+
+
+"""
+norm.fit(X['Month'])
+X['Month'] = norm.fit_transform(X['Month'])
+
+norm.fit(X['Day'])
+X['Day'] = norm.fit_transform(X['Day'])
+"""
 std = StandardScaler()
 for s in numerical:
     std.fit(X[s].to_numpy().reshape(len(X[s]),-1))
     X[s] = std.fit_transform(X[s].to_numpy().reshape(len(X[s]),-1))
 
-std.fit(y.to_numpy().reshape(len(y),-1))
-y  = std.fit_transform(y.to_numpy().reshape(len(y),-1))
+std.fit(X['Y'].to_numpy().reshape(len(X['Y']),-1))
+X['Y'] = std.fit_transform(X['Y'].to_numpy().reshape(len(X['Y']),-1))
 
 
-#X.drop(columns=['Sate'],inplace=True)
-X = pd.get_dummies(X,drop_first=True)
+y = X['Y']
+X.drop(columns=['Y','County','State'],inplace=True)
+
+X = pd.get_dummies(X,drop_first=True,dtype='int')
 print(X)
-copy_of_x = X
+
+X = sm.add_constant(X)
+
+copy_of_x = X.copy()
 """
 ======================
 Down Sampling
@@ -231,20 +254,10 @@ plt.tight_layout()
 plt.show()
 """
 
-
-#X.drop(columns=['NO2_AQI_label','SO2_AQI_label','CO_AQI_label','Season','Year'
-#    ,'CO 1st Max Value','CO AQI','CO 1st Max Value'],inplace=True)
-
-
-#X = X[['O3 AQI','AQI','O3 Mean','NO2 Mean','O3_AQI_label','SO2 Mean',]]
-
 rf = RandomForestRegressor()
 X_train,X_test,y_train,y_test = train_test_split(X,y,shuffle=False,test_size=.2 )
-
 rf.fit(X_train,y_train)
-
 importances = rf.feature_importances_
-
 features = X.columns
 indices = np.argsort(importances)
 
@@ -254,33 +267,40 @@ indices = np.argsort(importances)
 Feature importance threshold dropping
 =====================================
 """
-
 threshold = 0.05
 dropped = []
 
 kept = []
-importance =  []
+importance = []
+i = 0
 for ind in indices:
-    if importances[ind] < threshold:
+    if importances[ind] <= threshold:
         dropped.append(features[ind])
     else:
         kept.append(features[ind])
         importance.append(importances[ind])
+        features = np.delete(features,ind)
+        importances = np.delete(importances,ind)
+
+print(dropped)
+indices = np.argsort(importances)
 
 X.drop(columns=dropped,inplace=True)
+X_train,X_test,y_train,y_test = train_test_split(X,y,shuffle=False,test_size=.2 )
+rf.fit(X_train,y_train)
 
-print(X)
-plt.title('Feature Importance')
+importances = rf.feature_importances_
+features = X.columns
+indices = np.argsort(importances)
+plt.title(f'Feature Importance After {len(dropped)} dropped')
 plt.barh(range(len(indices)),importances[indices],color='b',align='center')
 plt.yticks(range(len(indices)),[features[i] for i in indices])
 plt.xlabel('Relative Importance.')
 plt.tight_layout()
-plt.legend()
 plt.show()
 
-rf_pred = rf.predict(X_test)
+"""rf_pred = rf.predict(X_test)
 print(f'MSE: {mean_squared_error(y_test,rf_pred)}')
-
 plt.plot(np.arange(0,len(rf_pred)),rf_pred,label='Predicted')
 plt.plot(np.arange(0,len(rf_pred)),y_test,label='Actual')
 plt.xticks()
@@ -288,24 +308,18 @@ plt.title('Actual, versus predicted values')
 plt.legend()
 plt.grid()
 plt.show()
-
-"""
-=======
-Values dropped from Random Forest Analysis
-=======
 """
 
-columns=['NO2_AQI_label','SO2_AQI_label','CO_AQI_label','Season','Year'
-    ,'CO 1st Max Value','CO AQI','CO 1st Max Value']
-
 """
+============================
 PRINCIPAL COMPONENT ANALYSIS
+============================
 """
-X = copy_of_x
-pca = PCA(n_components='mle',svd_solver='full')
+X = copy_of_x.copy()
+print(X.dtypes.unique())
+pca = PCA(svd_solver='arpack')
 pca.fit(X)
 X_pca = pca.transform(X)
-PCA(n_components='mle',svd_solver='full')
 
 print(f'Explained Variance Ratio {pca.explained_variance_ratio_}')
 s = 0
@@ -321,13 +335,85 @@ n_features = len(X.columns)
 plt.figure()
 plt.plot(np.arange(1,len(np.cumsum(pca.explained_variance_ratio_))
 +1,1),np.cumsum(pca.explained_variance_ratio_),label='Variance Ratio')
-#plt.axvline(x=7.8,color='r')
-#plt.axhline(0.9,color='g')
 
-plt.xticks(np.arange(1,len(np.cumsum(pca.explained_variance_ratio_))+1,1))
+plt.xticks(np.arange(1,len(np.cumsum(pca.explained_variance_ratio_))+1,10))
 plt.xlabel('N Components')
 plt.ylabel('Cumulative explained variance')
-plt.title('PCA Exact 90% Threshold v-line and h-line')
+plt.title('PCA Exlplained Variance vs N components')
 plt.legend()
 plt.grid()
 plt.show()
+
+"""
+===============================
+Singular Value Decomp Analysis
+===============================
+"""
+
+X = copy_of_x
+X.dropna(inplace=True)
+X_train,X_test,y_train,y_test = train_test_split(X,y,shuffle=False,test_size=.2 )
+
+all_zero = False
+removed =[]
+model = sm.OLS(y_train, X_train).fit()
+print(model.summary())
+while not all_zero:
+    ar = model.pvalues.reset_index()
+    "Checks for each one equals 0"
+    if round(ar[0].sum(),3) == 0.000:
+        all_zero = True
+        break
+    t = ar.loc[ar[0] == ar[0].max()]
+    remove = t['index'].item()
+    removed.append(remove)
+
+    X_test.drop(remove,inplace=True,axis=1)
+    X_train.drop(remove, inplace=True,axis=1)
+    model = sm.OLS(y_train, X_train).fit()
+
+print(f'FEATURES REMOVED: {len(removed)}')
+print(model.summary())
+
+#X['Y'] = std.fit_transform(pred.to_numpy().reshape(len(X['Y']),-1))
+
+
+predictions = model.predict(X_test)
+predictions_rev = std.inverse_transform(predictions.to_numpy().reshape(len(X_test),1))
+
+
+
+actual = std.inverse_transform(y_test.to_numpy().reshape(len(X_test),1))
+point1 = actual.min()
+point2 = actual.max()
+
+sns.lineplot(x=np.arange(0,len(predictions),1),y=predictions_rev.reshape(len(X_test),),label='Predicted')
+sns.lineplot(x=np.arange(0,len(actual),1),y=actual.reshape(len(X_test),),label='Actual',alpha=0.4,color='red')
+
+plt.xlabel('N Observations')
+plt.ylabel('Actual Value')
+plt.title(f'SVD: Actual vs. Predicted Value MSE: {round(mean_squared_error(actual,predictions_rev),2)}')
+plt.legend()
+plt.show()
+
+"""
+===============
+VIF Analysis
+===============
+"""
+df.drop('classification',inplace=True,axis=1)
+X = copy_of_x
+vif_data1 = pd.DataFrame()
+vif_data1['feature'] = df.columns
+vif_data1['VIF'] = [variance_inflation_factor(X.values,i) for i in range(len(df.columns))]
+
+print(vif_data1)
+
+df.drop('SO2 Mean',inplace=True,axis=1)
+
+vif_data2 = pd.DataFrame()
+vif_data2['feature'] = df.columns
+vif_data2['VIF'] = [variance_inflation_factor(X.values,i) for i in range(len(df.columns))]
+print(vif_data2)
+
+"Remove max until everything is <= 10"
