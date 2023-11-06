@@ -156,6 +156,8 @@ fiq,axs = plt.subplots(2,2)
 axs[0,0].plot(temp_df['Year'],temp_df['CO Mean'],'tab:orange')
 axs[0,0].set_title('CO Mean PPM 2019-2022')
 
+axs[0,1].plot(temp_df['Year'],temp_df['O3 Mean'],'tab:green')
+axs[0,1].set_title('O3 Mean PPM 2019-2022')
 
 axs[1,0].plot(temp_df['Year'],temp_df['SO2 Mean'],'tab:red')
 axs[1,0].set_title('SO2 Mean PPB 2019-2022')
