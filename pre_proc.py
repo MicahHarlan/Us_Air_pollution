@@ -12,7 +12,7 @@ from imblearn.under_sampling import RandomUnderSampler
 from sklearn.metrics import mean_squared_error
 
 
-from numba import jit,cuda
+
 
 """
 ======================
@@ -23,10 +23,21 @@ to make it more useful for ML
 ======================
 """
 
-
 read = 'pollution_2000_2022.csv'
 df = pd.read_csv(read)
 df.drop(columns=['Unnamed: 0'],inplace=True)
+
+"""
+======================
+Number of Observations
+======================
+"""
+#n = 575000
+#test_n = 640000
+#df = df.iloc[n:,:]
+
+
+
 
 
 
@@ -36,11 +47,9 @@ ranges = [(0,50),(51,100),(101,150),(151,200),(201,300)]
 temp = df['O3 AQI']
 O3_AQI_class = pd.DataFrame()
 
-
-
 "PPM = Parts Per Million"
 "PPB = Parts Per Billion"
-units = {'O3':'PPM','NO2':'PPB','S02':'PPB','CO2':'PPM'}
+
 
 """
 ===============
@@ -130,28 +139,38 @@ df['classification'] = np.select([df['Y'].between(0,50),
                                 ,air_qual)
 
 
-
-
-"""temp_df = df.groupby(['Year','Season'
-                      ]).mean(numeric_only=True)
+"""
+=========
+Quad Plot
+=========
+"""
+temp_df = df.groupby(['Year']).mean(numeric_only=True)
 temp_df.reset_index(inplace=True)
+
+print(f'{temp_df["Year"]}')
+units = {'O3':'PPM','NO2':'PPB','SO2':'PPB','CO':'PPM'}
 plt.figure()
 plt.tight_layout()
-plt.plot(temp_df['Year'],temp_df['CO Mean'])
-plt.show()"""
+fiq,axs = plt.subplots(2,2)
+axs[0,0].plot(temp_df['Year'],temp_df['CO Mean'],'tab:orange')
+axs[0,0].set_title('CO Mean PPM 2019-2022')
 
+axs[0,1].plot(temp_df['Year'],temp_df['O3 Mean'],'tab:green')
+axs[0,1].set_title('O3 Mean PPM 2019-2022')
 
-"""
-Ratio of Pollutants: 
-Calculate ratios between different pollutant levels,
-like O3/NO2 or CO/SO2,
-to explore potential interactions between pollutants.
-"""
+axs[1,0].plot(temp_df['Year'],temp_df['SO2 Mean'],'tab:red')
+axs[1,0].set_title('SO2 Mean PPB 2019-2022')
 
+axs[1,1].plot(temp_df['Year'],temp_df['NO2 Mean'])
+axs[1,1].set_title('NO2 Mean PPB 2019-2022')
 
+plt.tight_layout()
+plt.show()
 
+print(df.describe())
+print(df.isna().sum())
 
-
+df = df[(df['Date'] >= '2019-01-01')]
 
 
 """
@@ -159,21 +178,12 @@ to explore potential interactions between pollutants.
 Dimensionality Reduction
 ========================
 """
+print(df[['AQI','Y']])
 
-n = 575000
-test_n = 640000
-df = df.iloc[n:,:]
-df.set_index(df['Date'],inplace=True)
-
-
-
+#df.set_index(df['Date'],inplace=True)
 
 X = df.drop(columns=['classification','Address','Date'])
 print(df)
-
-
-
-
 
 rus = RandomUnderSampler()
 #X,y = rus.fit_resample(X,df['classification'])
