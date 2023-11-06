@@ -1,18 +1,14 @@
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import LabelEncoder
-from imblearn.under_sampling import RandomUnderSampler
 from sklearn.metrics import mean_squared_error
-
-
-from numba import jit,cuda
+from sklearn.decomposition import PCA
 
 """
 ======================
@@ -85,10 +81,6 @@ df['AQI'] = df[['O3 AQI','CO AQI','SO2 AQI','NO2 AQI']].max(axis=1)
 df['Y'] = df['AQI'].shift(-1)
 df.drop(df.tail(1).index,inplace=True)
 
-
-
-
-
 """
 ======================
 Adding the AQI labels
@@ -129,9 +121,6 @@ df['classification'] = np.select([df['Y'].between(0,50),
                                  df['Y'].between(201,300)]
                                 ,air_qual)
 
-
-
-
 """temp_df = df.groupby(['Year','Season'
                       ]).mean(numeric_only=True)
 temp_df.reset_index(inplace=True)
@@ -148,73 +137,52 @@ like O3/NO2 or CO/SO2,
 to explore potential interactions between pollutants.
 """
 
-
-
-
-
-
-
 """
 ========================
 Dimensionality Reduction
 ========================
 """
-
 n = 575000
 test_n = 640000
-df = df.iloc[n:,:]
+df = df.iloc[test_n:,:]
 df.set_index(df['Date'],inplace=True)
 
-
-
-
 X = df.drop(columns=['classification','Address','Date'])
-print(df)
-
-
-
-
-
-rus = RandomUnderSampler()
-#X,y = rus.fit_resample(X,df['classification'])
 
 y = X['Y']
-X.drop(columns=['Y'],inplace=True)
+X.drop(columns=['Y','County','State'],inplace=True)
+
 
 le = LabelEncoder()
-
-le.fit(X['State'])
-X['State'] = le.fit_transform(X['State'])
-
-le.fit(X['County'])
-X['County'] = le.fit_transform(X['County'])
-
-le.fit(X['City'])
-X['City'] = le.fit_transform(X['City'])
-
-le.fit(X['Season'])
-X['Season'] = le.fit_transform(X['Season'])
-
 le.fit(X['NO2_AQI_label'])
 X['NO2_AQI_label'] = le.fit_transform(X['NO2_AQI_label'])
-
 le.fit(X['O3_AQI_label'])
 X['O3_AQI_label'] = le.fit_transform(X['O3_AQI_label'])
-
 le.fit(X['CO_AQI_label'])
 X['CO_AQI_label'] = le.fit_transform(X['CO_AQI_label'])
-
 le.fit(X['SO2_AQI_label'])
 X['SO2_AQI_label'] = le.fit_transform(X['SO2_AQI_label'])
 
+numerical = [ 'O3 Mean',
+       'O3 1st Max Value', 'O3 1st Max Hour', 'O3 AQI', 'CO Mean',
+       'CO 1st Max Value', 'CO 1st Max Hour', 'CO AQI', 'SO2 Mean',
+       'SO2 1st Max Value', 'SO2 1st Max Hour', 'SO2 AQI', 'NO2 Mean',
+       'NO2 1st Max Value', 'NO2 1st Max Hour', 'NO2 AQI','AQI']
 
-#X = pd.get_dummies(data=X,drop_first=True)
 
 std = StandardScaler()
-numerical = ['AQI','O3 Mean'
-    ,'O3 AQI','NO2 1st Max Hour','SO2 Mean','NO2 Mean','O3 AQI']
+for s in numerical:
+    std.fit(X[s].to_numpy().reshape(len(X[s]),-1))
+    X[s] = std.fit_transform(X[s].to_numpy().reshape(len(X[s]),-1))
+
+std.fit(y.to_numpy().reshape(len(y),-1))
+y  = std.fit_transform(y.to_numpy().reshape(len(y),-1))
 
 
+#X.drop(columns=['Sate'],inplace=True)
+X = pd.get_dummies(X,drop_first=True)
+print(X)
+copy_of_x = X
 """
 ======================
 Down Sampling
@@ -228,8 +196,8 @@ plt.show()
 """
 
 
-X.drop(columns=['NO2_AQI_label','SO2_AQI_label','CO_AQI_label','Season','Year'
-    ,'CO 1st Max Value','CO AQI','CO 1st Max Value'],inplace=True)
+#X.drop(columns=['NO2_AQI_label','SO2_AQI_label','CO_AQI_label','Season','Year'
+#    ,'CO 1st Max Value','CO AQI','CO 1st Max Value'],inplace=True)
 
 
 #X = X[['O3 AQI','AQI','O3 Mean','NO2 Mean','O3_AQI_label','SO2 Mean',]]
@@ -240,9 +208,31 @@ X_train,X_test,y_train,y_test = train_test_split(X,y,shuffle=False,test_size=.2 
 rf.fit(X_train,y_train)
 
 importances = rf.feature_importances_
-
 features = X.columns
 indices = np.argsort(importances)
+
+
+"""
+=====================================
+Feature importance threshold dropping
+=====================================
+"""
+
+threshold = 0.05
+dropped = []
+
+kept = []
+importance =  []
+for ind in indices:
+    if importances[ind] < threshold:
+        dropped.append(features[ind])
+    else:
+        kept.append(features[ind])
+        importance.append(importances[ind])
+
+X.drop(columns=dropped,inplace=True)
+
+print(X)
 plt.title('Feature Importance')
 plt.barh(range(len(indices)),importances[indices],color='b',align='center')
 plt.yticks(range(len(indices)),[features[i] for i in indices])
@@ -267,9 +257,40 @@ plt.show()
 Values dropped from Random Forest Analysis
 =======
 """
+
 columns=['NO2_AQI_label','SO2_AQI_label','CO_AQI_label','Season','Year'
     ,'CO 1st Max Value','CO AQI','CO 1st Max Value']
 
 """
 PRINCIPAL COMPONENT ANALYSIS
 """
+X = copy_of_x
+pca = PCA(n_components='mle',svd_solver='full')
+pca.fit(X)
+X_pca = pca.transform(X)
+PCA(n_components='mle',svd_solver='full')
+
+print(f'Explained Variance Ratio {pca.explained_variance_ratio_}')
+s = 0
+a = 0
+for i in pca.explained_variance_ratio_:
+    s += i
+    a += 1
+    if s >= .90:
+        break
+print(f'Number of Features explaining 90% dependent variance variance: {a}')
+n_features = len(X.columns)
+
+plt.figure()
+plt.plot(np.arange(1,len(np.cumsum(pca.explained_variance_ratio_))
++1,1),np.cumsum(pca.explained_variance_ratio_),label='Variance Ratio')
+#plt.axvline(x=7.8,color='r')
+#plt.axhline(0.9,color='g')
+
+plt.xticks(np.arange(1,len(np.cumsum(pca.explained_variance_ratio_))+1,1))
+plt.xlabel('N Components')
+plt.ylabel('Cumulative explained variance')
+plt.title('PCA Exact 90% Threshold v-line and h-line')
+plt.legend()
+plt.grid()
+plt.show()
