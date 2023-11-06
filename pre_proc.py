@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
@@ -8,6 +9,10 @@ import seaborn as sns
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import LabelEncoder
 from imblearn.under_sampling import RandomUnderSampler
+from sklearn.metrics import mean_squared_error
+
+
+from numba import jit,cuda
 
 """
 ======================
@@ -50,9 +55,10 @@ df.drop_duplicates(inplace=True)
 df['Date'] = pd.to_datetime(df['Date'])
 df['Month'] = df['Date'].dt.month
 df['Year'] = df['Date'].dt.year
-
-#df = df.groupby(['State','Date','County']).mean(numeric_only=True)
+df['Day'] = df['Date'].dt.day
+#df = df.groupby(['Year','Month','State','Day','County','City']).mean(numeric_only=True)
 #df.reset_index(inplace=True)
+print(df)
 
 """
 ======================
@@ -88,7 +94,7 @@ df.drop(df.tail(1).index,inplace=True)
 Adding the AQI labels
 ======================
 """
-df['N02_AQI_label'] = np.select([df['NO2 AQI'].between(0,50),
+df['NO2_AQI_label'] = np.select([df['NO2 AQI'].between(0,50),
                                  df['NO2 AQI'].between(51,100),
                                  df['NO2 AQI'].between(101,150),
                                  df['NO2 AQI'].between(151,200),
@@ -154,9 +160,21 @@ Dimensionality Reduction
 ========================
 """
 
+n = 575000
+test_n = 640000
+df = df.iloc[n:,:]
+df.set_index(df['Date'],inplace=True)
+
+
 
 
 X = df.drop(columns=['classification','Address','Date'])
+print(df)
+
+
+
+
+
 rus = RandomUnderSampler()
 #X,y = rus.fit_resample(X,df['classification'])
 
@@ -177,8 +195,8 @@ X['City'] = le.fit_transform(X['City'])
 le.fit(X['Season'])
 X['Season'] = le.fit_transform(X['Season'])
 
-le.fit(X['N02_AQI_label'])
-X['N02_AQI_label'] = le.fit_transform(X['N02_AQI_label'])
+le.fit(X['NO2_AQI_label'])
+X['NO2_AQI_label'] = le.fit_transform(X['NO2_AQI_label'])
 
 le.fit(X['O3_AQI_label'])
 X['O3_AQI_label'] = le.fit_transform(X['O3_AQI_label'])
@@ -190,24 +208,39 @@ le.fit(X['SO2_AQI_label'])
 X['SO2_AQI_label'] = le.fit_transform(X['SO2_AQI_label'])
 
 
+#X = pd.get_dummies(data=X,drop_first=True)
+
+std = StandardScaler()
+numerical = ['AQI','O3 Mean'
+    ,'O3 AQI','NO2 1st Max Hour','SO2 Mean','NO2 Mean','O3 AQI']
+
+
 """
 ======================
 Down Sampling
 ======================
 """
-sns.countplot(x=df['AQI'],data=df)
+
+"""sns.countplot(x=df['AQI'],data=df)
 plt.title('Countplot of Target')
 plt.tight_layout()
 plt.show()
+"""
 
 
+X.drop(columns=['NO2_AQI_label','SO2_AQI_label','CO_AQI_label','Season','Year'
+    ,'CO 1st Max Value','CO AQI','CO 1st Max Value'],inplace=True)
 
 
+#X = X[['O3 AQI','AQI','O3 Mean','NO2 Mean','O3_AQI_label','SO2 Mean',]]
 
 rf = RandomForestRegressor()
 X_train,X_test,y_train,y_test = train_test_split(X,y,shuffle=False,test_size=.2 )
+
 rf.fit(X_train,y_train)
+
 importances = rf.feature_importances_
+
 features = X.columns
 indices = np.argsort(importances)
 plt.title('Feature Importance')
@@ -217,3 +250,26 @@ plt.xlabel('Relative Importance.')
 plt.tight_layout()
 plt.legend()
 plt.show()
+
+rf_pred = rf.predict(X_test)
+print(f'MSE: {mean_squared_error(y_test,rf_pred)}')
+
+plt.plot(np.arange(0,len(rf_pred)),rf_pred,label='Predicted')
+plt.plot(np.arange(0,len(rf_pred)),y_test,label='Actual')
+plt.xticks()
+plt.title('Actual, versus predicted values')
+plt.legend()
+plt.grid()
+plt.show()
+
+"""
+=======
+Values dropped from Random Forest Analysis
+=======
+"""
+columns=['NO2_AQI_label','SO2_AQI_label','CO_AQI_label','Season','Year'
+    ,'CO 1st Max Value','CO AQI','CO 1st Max Value']
+
+"""
+PRINCIPAL COMPONENT ANALYSIS
+"""
