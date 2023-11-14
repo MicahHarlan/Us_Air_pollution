@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import statsmodels.api as sm
-from sklearn.preprocessing import StandardScaler,LabelEncoder,Normalizer
+from sklearn.preprocessing import StandardScaler,LabelEncoder,Normalizer,normalize
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor,RandomForestClassifier
 from sklearn.metrics import mean_squared_error
@@ -42,10 +42,34 @@ removed_states = ['Alabama','Alabama', 'Arizona', 'Arkansas', 'California', 'Col
     ,'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Kansas', 'Louisiana','Michigan',
                   'Minnesota', 'Missouri','Nevada', 'New Mexico',
                   'North Dakota','Ohio','Oklahoma', 'Oregon', 'South Dakota', 'Tennessee',
-                  'Texas', 'Utah','Washington', 'Wisconsin','Wyoming']
+                  'Texas', 'Utah','Washington', 'Wisconsin','Wyoming','Mississippi','Iowa','Kentucky','Alaska',]
 
 for s in removed_states:
     df = df[(df['State'] != s)]
+
+"""
+====================
+Pearson Correrlation
+====================
+"""
+plt.figure(figsize=(16,16))
+correlation_matrix = df.corr()
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=".2f", linewidths=0.5)
+plt.title('Pearson Correlation Coefficients Heatmap')
+plt.tight_layout()
+plt.show()
+
+"""
+====================
+Pearson Correrlation
+====================
+"""
+
+plt.figure(figsize=(16,16))
+sns.heatmap(df.cov(), annot=True, cmap='coolwarm', fmt=".2f", linewidths=0.8)
+plt.title('Covariance Matrix Heatmap')
+plt.tight_layout()
+plt.show()
 
 
 print(len(df))
@@ -95,6 +119,8 @@ Highest AQI Value is the actual AQI value.
 "AQI value is chosen from the max AQI value of the 3."
 df['AQI'] = df[['O3 AQI','CO AQI','SO2 AQI','NO2 AQI']].max(axis=1)
 
+
+
 df['Y'] = df['AQI'].shift(-1)
 df.drop(df.tail(1).index,inplace=True)
 """
@@ -136,7 +162,6 @@ df['classification'] = np.select([df['Y'].between(0,50),
                                  df['Y'].between(151,200),
                                  df['Y'].between(201,300)]
                                 ,air_qual)
-
 """
 =========
 Quad Plot
@@ -172,30 +197,48 @@ plt.show()
 Setting Date
 """
 shuffle = False
+
+#print(f'Before Rolling {len(df)}')
+#df['days_since_start'] = (df['Date'] - pd.to_datetime('2017-01-01')).dt.days
+
 df = df[(df['Date'] >= '2017-01-01')]
 df['days_since_start'] = (df['Date'] - pd.to_datetime('2017-01-01')).dt.days
-
 
 #print(len(df))
 #df = df[(df['Date'] >= '2020-06-01')]
 df.reset_index(inplace=True,drop=True)
 
-
-"""
-======================
-Data Imbalance
-======================
-"""
-sns.countplot(x=df['classification'],data=df)
-plt.title('Countplot of Target')
-plt.tight_layout()
-plt.show()
-
-
 """
 ========================
 Dimensionality Reduction
 ========================
+"""
+
+
+
+"""
+==================
+Low Variance Filter
+==================
+"""
+numeric = df.select_dtypes(include=np.number)
+
+normalize = normalize(numeric)
+numeric_normalized = pd.DataFrame(normalize)
+var = numeric_normalized.var()
+var_normalized = numeric_normalized.var()*100/np.max(var)
+threshold = 1e-3
+low_variance = []
+numeric_col = numeric.columns
+for i in range(len(numeric_col)):
+    if var_normalized[i] < threshold:
+        low_variance.append(numeric.columns[i])
+print(f'Low Variance Filtered Features {low_variance}')
+
+"""
+=====
+Data Transformation
+=====
 """
 X = df.drop(columns=['classification','Address','Date'])
 le = LabelEncoder()
@@ -207,20 +250,19 @@ le.fit(X['CO_AQI_label'])
 X['CO_AQI_label'] = le.fit_transform(X['CO_AQI_label'])
 le.fit(X['SO2_AQI_label'])
 X['SO2_AQI_label'] = le.fit_transform(X['SO2_AQI_label'])
-
-
-
-
+le.fit(df['classification'])
+y_class = le.fit_transform(df['classification'])
 
 norm = Normalizer()
-norm.fit(X['Year'].to_numpy().reshape(len(X['Year']),-1))
-X['Year'] = norm.fit_transform(X['Year'].to_numpy().reshape(len(X['Year']),-1))
 
 norm.fit(X['Month'].to_numpy().reshape(len(X['Month']),-1))
 X['Month'] = norm.fit_transform(X['Month'].to_numpy().reshape(len(X['Month']),-1))
 
 norm.fit(X['Day'].to_numpy().reshape(len(X['Day']),-1))
 X['Day'] = norm.fit_transform(X['Day'].to_numpy().reshape(len(X['Day']),-1))
+
+norm.fit(X['Year'].to_numpy().reshape(len(X['Year']),-1))
+X['Year'] = norm.fit_transform(X['Year'].to_numpy().reshape(len(X['Year']),-1))
 
 
 numerical = ['O3 Mean',
@@ -240,7 +282,37 @@ X['Y'] = std.fit_transform(X['Y'].to_numpy().reshape(len(X['Y']),-1))
 y = X['Y']
 X.drop(columns=['Y','County','City'],inplace=True,axis=1) #State,City
 X = pd.get_dummies(X,drop_first=True,dtype='int')
-print(X)
+
+"""
+=========
+Dropping low variance features
+==========
+"""
+
+
+
+"""
+======================
+Data Imbalance Used SMOTE
+======================
+"""
+
+"""from imblearn.over_sampling import SMOTE
+oversample = SMOTE(sampling_strategy='auto')
+X = pd.concat([X,y],axis=1)
+X, y_class = oversample.fit_resample(X, y_class)
+y = X['Y']
+X.drop(columns=['Y'],inplace=True,axis=1)
+print(f'LEN: {len(X)}')
+sns.countplot(x=y_class,data=df)
+plt.title('Countplot of Target')
+plt.tight_layout()
+plt.show()"""
+
+sns.countplot(x=df['classification'],data=df)
+plt.title('Countplot of Target')
+plt.tight_layout()
+plt.show()
 
 """
 ===============
@@ -248,7 +320,6 @@ VIF Analysis
 ===============
 """
 #df.drop('classification',inplace=True,axis=1)
-
 under_ten = False
 removed =[]
 while not under_ten:
@@ -283,7 +354,7 @@ copy_of_x = X.copy()
 Random Forest Analysis
 ======================
 """
-rf = RandomForestRegressor()
+rf = RandomForestRegressor(max_depth=10)
 X_train,X_test,y_train,y_test = train_test_split(X,y,test_size=.2 ,shuffle=shuffle)
 rf.fit(X_train,y_train)
 importances = rf.feature_importances_
@@ -316,7 +387,6 @@ indices = np.argsort(importances)
 X.drop(columns=dropped,inplace=True,axis=1)
 X_train,X_test,y_train,y_test = train_test_split(X,y,test_size=.2 ,shuffle=shuffle)
 rf.fit(X_train,y_train)
-
 rand_kept = X.columns
 
 importances = rf.feature_importances_
@@ -374,57 +444,10 @@ plt.legend()
 plt.grid()
 plt.show()
 
-"""
-===============================
-backward stepwise
-regression needs to move to phase 2
-===============================
-"""
-X = copy_of_x
-X.dropna(inplace=True)
-X_train,X_test,y_train,y_test = train_test_split(X,y,shuffle=shuffle,test_size=.2 )
-
-all_zero = False
-removed =[]
-model = sm.OLS(y_train, X_train).fit()
-print(model.summary())
-while not all_zero:
-    ar = model.pvalues.reset_index()
-    "Checks for each one equals 0"
-    if round(ar[0].sum(),3) == 0.000:
-        all_zero = True
-        break
-    t = ar.loc[ar[0] == ar[0].max()]
-    remove = t['index'].item()
-    removed.append(remove)
-
-    X_test.drop(remove,inplace=True,axis=1)
-    X_train.drop(remove, inplace=True,axis=1)
-    model = sm.OLS(y_train, X_train).fit()
-
-print(f'SVD FEATURES REMOVED: {len(removed)}')
-svd_removed = removed
-print(model.summary())
-
-#X['Y'] = std.fit_transform(pred.to_numpy().reshape(len(X['Y']),-1))
-
-
-predictions = model.predict(X_test)
-predictions_rev = std.inverse_transform(predictions.to_numpy().reshape(len(X_test),1))
-actual = std.inverse_transform(y_test.to_numpy().reshape(len(X_test),1))
-point1 = actual.min()
-point2 = actual.max()
-sns.lineplot(x=np.arange(0,len(predictions),1),y=predictions_rev.reshape(len(X_test),),label='Predicted')
-sns.lineplot(x=np.arange(0,len(actual),1),y=actual.reshape(len(X_test),),label='Actual',alpha=0.4,color='red')
-plt.xlabel('N Observations')
-plt.ylabel('Actual Value')
-plt.title(f'SVD: Actual vs. Predicted Value MSE: {round(mean_squared_error(actual,predictions_rev),2)}')
-plt.legend()
-plt.show()
-
 print(f'RF: {rand_kept}')
-print(f'SVD:{X.columns}')
-print(f'BOTH KEPT:{set(rand_kept).intersection(set(X.columns))}')
+print(f'LOW VARIANCE DROPPED{low_variance}')
+#print(f'SVD:{X.columns}')
+#print(f'BOTH KEPT:{set(rand_kept).intersection(set(X.columns))}')
 
 choosen_features = list(set(rand_kept).intersection(set(X.columns)))
 choosen_features.append('Season_Spring')
