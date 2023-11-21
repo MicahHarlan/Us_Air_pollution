@@ -4,11 +4,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import statsmodels.api as sm
-from sklearn.preprocessing import StandardScaler,LabelEncoder,Normalizer
+from sklearn.preprocessing import StandardScaler,LabelEncoder
 from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestRegressor,RandomForestClassifier
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
-from statsmodels.stats.outliers_influence import variance_inflation_factor
+from sklearn.linear_model import LinearRegression
+from prettytable import PrettyTable
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -19,7 +20,6 @@ y = df['Y']
 X = df.drop('Y',axis=1)
 
 shuffle = False
-
 y_std = StandardScaler()
 y_std.fit(y.to_numpy().reshape(len(y),-1))
 y = y_std.fit_transform(y.to_numpy().reshape(len(y),-1))
@@ -41,7 +41,6 @@ copy_x = X.copy()
 """
 ===============================
 backward stepwise
-regression needs to move to phase 2
 ===============================
 """
 X_train,X_test,y_train,y_test = train_test_split(X,y,shuffle=shuffle,test_size=.2 )
@@ -66,22 +65,41 @@ print(f'Stepwise FEATURES REMOVED: {len(removed)}')
 step_wise = removed
 print(model.summary())
 
+"""
+=========================================================
+EXTRACTING R-squared, adjusted R-square, AIC, BIC and MSE
+=========================================================
+"""
+
+
+
+plt.figure(figsize=(10,4))
 predictions = model.predict(X_test)
 predictions_rev = y_std.inverse_transform(predictions.to_numpy().reshape(len(X_test),1))
 actual = y_std.inverse_transform(y_test.reshape(len(X_test),1))
-
+#test = y_std.inverse_transform(y_train.reshape(len(y_train),1))
 sns.lineplot(x=np.arange(0,len(predictions),1),y=predictions_rev.reshape(len(X_test),),label='Predicted')
 sns.lineplot(x=np.arange(0,len(actual),1),y=actual.reshape(len(X_test),),label='Actual',alpha=0.4,color='red')
+#sns.lineplot(x=np.arange(0,len(y_train),1),y=actual.reshape(len(y_test),),label='y_train',alpha=0.4,color='green')
+
+
 plt.xlabel('N Observations')
 plt.ylabel('Actual Value')
 plt.title(f'Backwards Stepwise: Actual vs. Predicted Value MSE: {round(mean_squared_error(actual,predictions_rev),2)}')
 plt.legend()
 plt.show()
 
+ols_r2 = model.rsquared
+ols_adj_r2 = model.rsquared_adj
+ols_AIC = model.aic
+ols_BIC = model.bic
+ols_MSE = round(mean_squared_error(actual,predictions_rev),2)
+
 """
 Run a Random Forest Again and put selected features in OLS.summary
 then compare each one in a pretty table HW#3
 """
+
 X = copy_x.copy()
 rf = RandomForestRegressor(max_depth=10)
 X_train,X_test,y_train,y_test = train_test_split(X,y,test_size=.2 ,shuffle=shuffle)
@@ -109,6 +127,7 @@ predictions = rf.predict(X_test)
 predictions_rev = y_std.inverse_transform(predictions.reshape(len(X_test),1))
 actual = y_std.inverse_transform(y_test.reshape(len(X_test),1))
 
+plt.figure(figsize=(10,4))
 sns.lineplot(x=np.arange(0,len(predictions),1),y=predictions_rev.reshape(len(X_test),),label='Predicted')
 sns.lineplot(x=np.arange(0,len(actual),1),y=actual.reshape(len(X_test),),label='Actual',alpha=0.4,color='red')
 plt.xlabel('N Observations')
@@ -117,8 +136,16 @@ plt.title(f'Random Forest: Actual vs. Predicted Value MSE: {round(mean_squared_e
 plt.legend()
 plt.show()
 
-
 """
 Prediction interval using stepwise Regression With selected 
 Features
+"""
+
+
+
+
+"""
+============================
+MultiLinear Regression Here
+============================
 """

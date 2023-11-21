@@ -1,3 +1,4 @@
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,7 +13,7 @@ from statsmodels.stats.outliers_influence import variance_inflation_factor
 
 import warnings
 warnings.filterwarnings("ignore")
-
+n_jobs=-1
 """
 ======================
 Micah Harlan
@@ -155,12 +156,14 @@ df['SO2_AQI_label'] = np.select([df['SO2 AQI'].between(0,50),
                                  df['SO2 AQI'].between(201,300)]
                                 ,air_qual)
 
+
 df['classification'] = np.select([df['Y'].between(0,50),
                                  df['Y'].between(51,100),
                                  df['Y'].between(101,150),
                                  df['Y'].between(151,200),
                                  df['Y'].between(201,300)]
                                 ,air_qual)
+
 """
 =========
 Quad Plot
@@ -187,17 +190,16 @@ axs[1,1].plot(temp_df['Year'],temp_df['NO2 Mean'])
 axs[1,1].set_title('NO2 Mean PPB')
 plt.tight_layout()
 plt.show()
-
+#%%
 """
 Setting Date
 """
 shuffle = False
-
 #print(f'Before Rolling {len(df)}')
 #df['days_since_start'] = (df['Date'] - pd.to_datetime('2017-01-01')).dt.days
 
-df = df[(df['Date'] >= '2017-01-01')]
-df['days_since_start'] = (df['Date'] - pd.to_datetime('2017-01-01')).dt.days
+df = df[(df['Date'] >= '2018-01-01')]
+df['days_since_start'] = (df['Date'] - pd.to_datetime('2018-01-01')).dt.days
 
 #print(len(df))
 #df = df[(df['Date'] >= '2020-06-01')]
@@ -298,20 +300,27 @@ plt.title('Countplot of Target')
 plt.tight_layout()
 plt.show()
 
-"""from imblearn.over_sampling import SMOTE
-oversample = SMOTE(sampling_strategy='auto')
+from imblearn.over_sampling import SMOTE,ADASYN
+oversample = ADASYN(sampling_strategy='auto',n_jobs=n_jobs)
 X = pd.concat([X,y],axis=1)
 X, y_class = oversample.fit_resample(X, y_class)
+X['y_class'] = y_class
+X.sort_values(['days_since_start'],axis=0,inplace=True)
 y = X['Y']
-X.drop(columns=['Y'],inplace=True,axis=1)
-print(f'LEN: {len(X)}')
+y_class = X['y_class']
+X.drop(columns=['Y','y_class'],inplace=True,axis=1)
+
+
+print(f'LEN X: {len(X)}')
+print(f'LEN Y:{len(y)}')
 sns.countplot(x=y_class,data=df)
 plt.title('Countplot of Target')
 plt.tight_layout()
-plt.show()"""
+plt.show()
+copy_of_x = X.copy()
 
+#%%
 
-X = copy_of_x.copy()
 """
 ===============
 VIF Analysis
@@ -335,6 +344,9 @@ while not under_ten:
     removed.append(t['feature'].item())
 removed.append('CO_AQI_label')
 X.drop('CO_AQI_label',inplace=True,axis=1)
+removed.append('SO2_AQI_label')
+X.drop('SO2_AQI_label',inplace=True,axis=1)
+
 vif_data1 = pd.DataFrame()
 vif_data1['feature'] = X.columns
 vif_data1['VIF'] = [variance_inflation_factor(X.values,i) for i in range(len(X.columns))]
@@ -347,14 +359,13 @@ copy_of_x = X.copy()
 vif_dropped = removed
 #X = sm.add_constant(X)
 
-
 """
 ======================
 Random Forest Analysis
 ======================
 """
 #X = copy_of_x.copy()
-rf = RandomForestRegressor(max_depth=10)
+rf = RandomForestRegressor(max_depth=10,n_jobs=n_jobs)
 X_train,X_test,y_train,y_test = train_test_split(X,y,test_size=.2 ,shuffle=shuffle)
 rf.fit(X_train,y_train)
 importances = rf.feature_importances_
@@ -384,7 +395,6 @@ X_train,X_test,y_train,y_test = train_test_split(X,y,test_size=.2 ,shuffle=shuff
 rf.fit(X_train,y_train)
 
 rand_kept = X.columns
-
 importances = rf.feature_importances_
 features = X.columns
 indices = np.argsort(importances)
@@ -402,11 +412,12 @@ predictions_rev = std.inverse_transform(predictions.reshape(len(X_test),1))
 actual = std.inverse_transform(y_test.to_numpy().reshape(len(X_test),1))
 point1 = actual.min()
 point2 = actual.max()
+plt.figure(figsize=(30,5))
 sns.lineplot(x=np.arange(0,len(predictions),1),y=predictions_rev.reshape(len(X_test),),label='Predicted')
 sns.lineplot(x=np.arange(0,len(actual),1),y=actual.reshape(len(X_test),),label='Actual',alpha=0.4,color='red')
 plt.xlabel('N Observations')
 plt.ylabel('Actual Value')
-plt.title(f'Random Forest: Actual vs. Predicted Value MSE: {round(mean_squared_error(actual,predictions_rev),2)}')
+plt.title(f'Random Forest: Actual vs. Predicted Value RMSE: {round(mean_squared_error(actual,predictions_rev,squared=False),2)}')
 plt.legend()
 plt.show()
 
@@ -459,7 +470,7 @@ kept_features = ['AQI','days_since_start','O3_AQI_label','NO2 Mean']
 
 X = copy_of_x.copy()
 X.drop(columns=[col for col in X.keys() if col not in rand_kept],inplace=True)
-X.drop(columns='O3 Mean',inplace=True)
+#X.drop(columns='O3 Mean',inplace=True)
 
 print(X.columns)
 
@@ -470,10 +481,10 @@ Selected Features Pearson Correrlation
 """
 
 temp = X.copy()
-temp.drop('O3_AQI_label',inplace=True,axis=1)
+#temp.drop('O3_AQI_label',inplace=True,axis=1)
+
 features = temp.keys()
 pearson_corr = df[features]
-
 
 plt.figure(figsize=(10,10))
 correlation_matrix = pearson_corr.corr(method='pearson')
