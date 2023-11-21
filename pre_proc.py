@@ -32,7 +32,7 @@ Number of Observations
 ======================
 """
 
-air_qual = ['Good','Moderate','Unhealthy for Sensitive Groups','Unhealthy','Very Unhealthy']
+air_qual = ['Good','Moderate','Unhealthy for SG','Unhealthy','Very Unhealthy']
 ranges = [(0,50),(51,100),(101,150),(151,200),(201,300)]
 
 temp = df['O3 AQI']
@@ -61,7 +61,7 @@ plt.show()
 
 """
 ====================
-Pearson Correrlation
+Covariance Matrix
 ====================
 """
 
@@ -118,11 +118,10 @@ Highest AQI Value is the actual AQI value.
 "New Feature Name: Chosen AQI"
 "AQI value is chosen from the max AQI value of the 3."
 df['AQI'] = df[['O3 AQI','CO AQI','SO2 AQI','NO2 AQI']].max(axis=1)
-
-
-
 df['Y'] = df['AQI'].shift(-1)
 df.drop(df.tail(1).index,inplace=True)
+
+
 """
 ======================
 Adding the AQI labels
@@ -176,22 +175,18 @@ plt.figure()
 plt.tight_layout()
 fiq,axs = plt.subplots(2,2)
 axs[0,0].plot(temp_df['Year'],temp_df['CO Mean'],'tab:orange')
-axs[0,0].set_title('CO Mean PPM 2019-2022')
+axs[0,0].set_title('CO Mean PPM')
 
 axs[0,1].plot(temp_df['Year'],temp_df['O3 Mean'],'tab:green')
-axs[0,1].set_title('O3 Mean PPM 2019-2022')
+axs[0,1].set_title('O3 Mean PPM')
 
 axs[1,0].plot(temp_df['Year'],temp_df['SO2 Mean'],'tab:red')
-axs[1,0].set_title('SO2 Mean PPB 2019-2022')
+axs[1,0].set_title('SO2 Mean PPB')
 
 axs[1,1].plot(temp_df['Year'],temp_df['NO2 Mean'])
-axs[1,1].set_title('NO2 Mean PPB 2019-2022')
-
+axs[1,1].set_title('NO2 Mean PPB')
 plt.tight_layout()
 plt.show()
-
-#print(df.describe())
-#print(df.isna().sum())
 
 """
 Setting Date
@@ -214,15 +209,12 @@ Dimensionality Reduction
 ========================
 """
 
-
-
 """
 ==================
 Low Variance Filter
 ==================
 """
 numeric = df.select_dtypes(include=np.number)
-
 normalize = normalize(numeric)
 numeric_normalized = pd.DataFrame(normalize)
 var = numeric_normalized.var()
@@ -234,6 +226,8 @@ for i in range(len(numeric_col)):
     if var_normalized[i] < threshold:
         low_variance.append(numeric.columns[i])
 print(f'Low Variance Filtered Features {low_variance}')
+
+#df.drop(low_variance, inplace=True,axis=1)
 
 """
 =====
@@ -254,7 +248,6 @@ le.fit(df['classification'])
 y_class = le.fit_transform(df['classification'])
 
 norm = Normalizer()
-
 norm.fit(X['Month'].to_numpy().reshape(len(X['Month']),-1))
 X['Month'] = norm.fit_transform(X['Month'].to_numpy().reshape(len(X['Month']),-1))
 
@@ -264,12 +257,15 @@ X['Day'] = norm.fit_transform(X['Day'].to_numpy().reshape(len(X['Day']),-1))
 norm.fit(X['Year'].to_numpy().reshape(len(X['Year']),-1))
 X['Year'] = norm.fit_transform(X['Year'].to_numpy().reshape(len(X['Year']),-1))
 
+removed_from_numerical = ['O3 Mean','O3 1st Max Value','CO Mean',
+                          'CO 1st Max Value', 'SO2 Mean','SO2 1st Max Value']
 
-numerical = ['O3 Mean',
-       'O3 1st Max Value', 'O3 1st Max Hour', 'O3 AQI', 'CO Mean',
-       'CO 1st Max Value', 'CO 1st Max Hour', 'CO AQI', 'SO2 Mean',
-       'SO2 1st Max Value', 'SO2 1st Max Hour', 'SO2 AQI', 'NO2 Mean',
-       'NO2 1st Max Value', 'NO2 1st Max Hour', 'NO2 AQI','AQI','days_since_start']
+numerical = ['O3 1st Max Hour', 'O3 AQI',
+        'CO 1st Max Hour', 'CO AQI',
+        'SO2 1st Max Hour', 'SO2 AQI', 'NO2 Mean',
+       'NO2 1st Max Value', 'NO2 1st Max Hour', 'NO2 AQI','AQI','days_since_start',
+             'O3 Mean', 'O3 1st Max Value', 'CO Mean','CO 1st Max Value', 'SO2 Mean',
+             'SO2 1st Max Value']
 
 
 std = StandardScaler()
@@ -280,8 +276,11 @@ for s in numerical:
 std.fit(X['Y'].to_numpy().reshape(len(X['Y']),-1))
 X['Y'] = std.fit_transform(X['Y'].to_numpy().reshape(len(X['Y']),-1))
 y = X['Y']
-X.drop(columns=['Y','County','City'],inplace=True,axis=1) #State,City
+X.drop(columns=['Y','County','City'],inplace=True,axis=1)
 X = pd.get_dummies(X,drop_first=True,dtype='int')
+
+X = sm.add_constant(X)
+copy_of_x = X.copy()
 
 """
 =========
@@ -289,13 +288,15 @@ Dropping low variance features
 ==========
 """
 
-
-
 """
 ======================
 Data Imbalance Used SMOTE
 ======================
 """
+sns.countplot(x=df['classification'],data=df)
+plt.title('Countplot of Target')
+plt.tight_layout()
+plt.show()
 
 """from imblearn.over_sampling import SMOTE
 oversample = SMOTE(sampling_strategy='auto')
@@ -309,11 +310,8 @@ plt.title('Countplot of Target')
 plt.tight_layout()
 plt.show()"""
 
-sns.countplot(x=df['classification'],data=df)
-plt.title('Countplot of Target')
-plt.tight_layout()
-plt.show()
 
+X = copy_of_x.copy()
 """
 ===============
 VIF Analysis
@@ -322,6 +320,7 @@ VIF Analysis
 #df.drop('classification',inplace=True,axis=1)
 under_ten = False
 removed =[]
+
 while not under_ten:
     vif_data = pd.DataFrame()
     vif_data['feature'] = X.columns
@@ -331,10 +330,9 @@ while not under_ten:
         break
 
     t = vif_data.loc[vif_data['VIF'] == vif_data['VIF'].max()]
-    #print(t['feature'].item())
+
     X.drop(t['feature'].item(),inplace=True,axis=1)
     removed.append(t['feature'].item())
-
 removed.append('CO_AQI_label')
 X.drop('CO_AQI_label',inplace=True,axis=1)
 vif_data1 = pd.DataFrame()
@@ -343,10 +341,11 @@ vif_data1['VIF'] = [variance_inflation_factor(X.values,i) for i in range(len(X.c
 print(vif_data1)
 print(f'FEATURES REMOVED WITH MULTICOLINEARITY: {len(removed)}')
 print(f'REMOVED: {removed}')
-
 X = sm.add_constant(X)
-print(X.columns)
+#print(X.columns)
 copy_of_x = X.copy()
+vif_dropped = removed
+#X = sm.add_constant(X)
 
 
 """
@@ -354,12 +353,14 @@ copy_of_x = X.copy()
 Random Forest Analysis
 ======================
 """
+#X = copy_of_x.copy()
 rf = RandomForestRegressor(max_depth=10)
 X_train,X_test,y_train,y_test = train_test_split(X,y,test_size=.2 ,shuffle=shuffle)
 rf.fit(X_train,y_train)
 importances = rf.feature_importances_
 features = X.columns
 indices = np.argsort(importances)
+
 
 """
 =====================================
@@ -368,25 +369,20 @@ Feature importance threshold dropping
 """
 threshold = 0.025
 dropped = []
-
 kept = []
 importance = []
 i = 0
+print(f'\n')
 for ind in indices:
     if importances[ind] <= threshold:
         dropped.append(features[ind])
-    else:
-        kept.append(features[ind])
-        importance.append(importances[ind])
-        features = np.delete(features,ind)
-        importances = np.delete(importances,ind)
-
+        X.drop(columns=features[ind],inplace=True,axis=1)
+print(f'\n')
 print(f'RF ANALYSIS FEATURES DROPPED: {dropped}')
-indices = np.argsort(importances)
 
-X.drop(columns=dropped,inplace=True,axis=1)
 X_train,X_test,y_train,y_test = train_test_split(X,y,test_size=.2 ,shuffle=shuffle)
 rf.fit(X_train,y_train)
+
 rand_kept = X.columns
 
 importances = rf.feature_importances_
@@ -398,6 +394,8 @@ plt.yticks(range(len(indices)),[features[i] for i in indices])
 plt.xlabel('Relative Importance.')
 plt.tight_layout()
 plt.show()
+
+
 
 predictions = rf.predict(X_test)
 predictions_rev = std.inverse_transform(predictions.reshape(len(X_test),1))
@@ -412,11 +410,14 @@ plt.title(f'Random Forest: Actual vs. Predicted Value MSE: {round(mean_squared_e
 plt.legend()
 plt.show()
 
+
 """
 ============================
 PRINCIPAL COMPONENT ANALYSIS
 ============================
 """
+
+
 X = copy_of_x.copy()
 pca = PCA(svd_solver='arpack')
 pca.fit(X)
@@ -444,12 +445,54 @@ plt.legend()
 plt.grid()
 plt.show()
 
-print(f'RF: {rand_kept}')
-print(f'LOW VARIANCE DROPPED{low_variance}')
-#print(f'SVD:{X.columns}')
-#print(f'BOTH KEPT:{set(rand_kept).intersection(set(X.columns))}')
+print(f'RF DROPPED: {dropped}')
+print(f'LOW VARIANCE DROPPED: {low_variance}')
+print(f'VIF DROPPED: {vif_dropped}')
 
-choosen_features = list(set(rand_kept).intersection(set(X.columns)))
-choosen_features.append('Season_Spring')
-choosen_features.append('Season_Summer')
-choosen_features.append('Season_Winter')
+
+
+dropped_features = list(set(dropped).intersection(low_variance))
+#dropped_features = list(set(dropped_features).intersection(vif_dropped))
+
+
+kept_features = ['AQI','days_since_start','O3_AQI_label','NO2 Mean']
+
+X = copy_of_x.copy()
+X.drop(columns=[col for col in X.keys() if col not in rand_kept],inplace=True)
+X.drop(columns='O3 Mean',inplace=True)
+
+print(X.columns)
+
+"""
+========================================
+Selected Features Pearson Correrlation
+========================================
+"""
+
+temp = X.copy()
+temp.drop('O3_AQI_label',inplace=True,axis=1)
+features = temp.keys()
+pearson_corr = df[features]
+
+
+plt.figure(figsize=(10,10))
+correlation_matrix = pearson_corr.corr(method='pearson')
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=".2f")
+plt.title('Selected Features Pearson Correlation Coefficients Heatmap Matrix Heatmap')
+plt.tight_layout()
+plt.show()
+
+"""
+========================================
+Selected Features Covariance Matrix
+========================================
+"""
+plt.figure(figsize=(10,10))
+sns.heatmap(temp.cov(), annot=True, cmap='coolwarm', fmt=".2f")
+plt.title('Selected Features Covariance Matrix Heatmap')
+plt.tight_layout()
+plt.show()
+
+X = df[X.keys()]
+X['Y'] = df['Y']
+#X.to_csv('cleaned_aqi.csv',index=False)
