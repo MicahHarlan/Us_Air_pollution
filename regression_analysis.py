@@ -4,16 +4,18 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import statsmodels.api as sm
-from sklearn.preprocessing import StandardScaler,LabelEncoder
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler,LabelEncoder,PolynomialFeatures
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
 from sklearn.linear_model import LinearRegression
 from prettytable import PrettyTable
-
+from sklearn.pipeline import make_pipeline
+from sklearn.model_selection import GridSearchCV
 import warnings
 warnings.filterwarnings("ignore")
-
+n_jobs = -1
 
 df = pandas.read_csv('cleaned_aqi.csv')
 y = df['Y']
@@ -85,7 +87,7 @@ sns.lineplot(x=np.arange(0,len(actual),1),y=actual.reshape(len(X_test),),label='
 
 plt.xlabel('N Observations')
 plt.ylabel('Actual Value')
-plt.title(f'Backwards Stepwise: Actual vs. Predicted Value MSE: {round(mean_squared_error(actual,predictions_rev),2)}')
+plt.title(f'Backwards Stepwise: Actual vs. Predicted Value RMSE: {round(mean_squared_error(actual,predictions_rev,squared=False),2)}')
 plt.legend()
 plt.show()
 
@@ -132,7 +134,7 @@ sns.lineplot(x=np.arange(0,len(predictions),1),y=predictions_rev.reshape(len(X_t
 sns.lineplot(x=np.arange(0,len(actual),1),y=actual.reshape(len(X_test),),label='Actual',alpha=0.4,color='red')
 plt.xlabel('N Observations')
 plt.ylabel('Actual Value')
-plt.title(f'Random Forest: Actual vs. Predicted Value MSE: {round(mean_squared_error(actual,predictions_rev),2)}')
+plt.title(f'Random Forest: Actual vs. Predicted Value RMSE: {round(mean_squared_error(actual,predictions_rev,squared=False),2)}')
 plt.legend()
 plt.show()
 
@@ -141,11 +143,62 @@ Prediction interval using stepwise Regression With selected
 Features
 """
 
+"""
+=========
+Quad Plot
+=========
+"""
+"""temp_df = df.groupby(['Year']).mean(numeric_only=True)
+temp_df.reset_index(inplace=True)
 
+#print(f'{temp_df["Year"]}')
+units = {'O3':'PPM','NO2':'PPB','SO2':'PPB','CO':'PPM'}
+plt.figure()
+plt.tight_layout()
+fiq,axs = plt.subplots(2,2)
+axs[0,0].plot(temp_df['Year'],temp_df['CO Mean'],'tab:orange')
+axs[0,0].set_title('CO Mean PPM')
 
+axs[0,1].plot(temp_df['Year'],temp_df['O3 Mean'],'tab:green')
+axs[0,1].set_title('O3 Mean PPM')
+
+axs[1,0].plot(temp_df['Year'],temp_df['SO2 Mean'],'tab:red')
+axs[1,0].set_title('SO2 Mean PPB')
+
+axs[1,1].plot(temp_df['Year'],temp_df['NO2 Mean'])
+axs[1,1].set_title('NO2 Mean PPB')
+plt.tight_layout()
+plt.show()
+"""
 
 """
 ============================
-MultiLinear Regression Here
+Polynomial Regression Here
 ============================
+"""
+X.drop('O3_AQI_label',inplace=True,axis=1)
+param_grid = {'polynomialfeatures__degree':np.arange(1,5,1)}
+def PolyNomialRegression(degree=2):
+    return make_pipeline(PolynomialFeatures(degree),LinearRegression(n_jobs=n_jobs))
+
+poly_grid = GridSearchCV(PolyNomialRegression(),param_grid
+                         ,scoring='neg_mean_squared_error',
+                         verbose=3,n_jobs=n_jobs,cv=5)
+poly_grid.fit(X,y)
+print(poly_grid.best_params_)
+pr = PolynomialFeatures(degree=poly_grid.best_params_['polynomialfeatures__degree'])
+X_train,X_test,y_train,y_test = train_test_split(X,y,test_size=.2 ,shuffle=shuffle)
+X_train = pr.fit_transform(X_train)
+X_test = pr.fit_transform(X_test)
+model = sm.OLS(y_train,X_train).fit()
+predictions_rev = std.inverse_transform(predictions.reshape(len(predictions),1))
+actual = y_test
+actual = std.inverse_transform(actual.reshape(len(actual),1))
+print(mean_squared_error(predictions_rev,actual,squared=False))
+mse_list = np.square(abs(poly_grid.cv_results_['mean_test_score']))
+
+"""
+================
+SVR 
+================
 """

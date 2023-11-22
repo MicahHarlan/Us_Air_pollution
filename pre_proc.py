@@ -10,10 +10,11 @@ from sklearn.ensemble import RandomForestRegressor,RandomForestClassifier
 from sklearn.metrics import mean_squared_error
 from sklearn.decomposition import PCA
 from statsmodels.stats.outliers_influence import variance_inflation_factor
-
+from scipy import stats
 import warnings
 warnings.filterwarnings("ignore")
 n_jobs=-1
+
 """
 ======================
 Micah Harlan
@@ -38,7 +39,6 @@ ranges = [(0,50),(51,100),(101,150),(151,200),(201,300)]
 
 temp = df['O3 AQI']
 O3_AQI_class = pd.DataFrame()
-
 removed_states = ['Alabama','Alabama', 'Arizona', 'Arkansas', 'California', 'Colorado'
     ,'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Kansas', 'Louisiana','Michigan',
                   'Minnesota', 'Missouri','Nevada', 'New Mexico',
@@ -48,29 +48,6 @@ removed_states = ['Alabama','Alabama', 'Arizona', 'Arkansas', 'California', 'Col
 for s in removed_states:
     df = df[(df['State'] != s)]
 
-"""
-====================
-Pearson Correrlation
-====================
-"""
-plt.figure(figsize=(16,16))
-correlation_matrix = df.corr()
-sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=".2f", linewidths=0.5)
-plt.title('Pearson Correlation Coefficients Heatmap')
-plt.tight_layout()
-plt.show()
-
-"""
-====================
-Covariance Matrix
-====================
-"""
-
-plt.figure(figsize=(16,16))
-sns.heatmap(df.cov(), annot=True, cmap='coolwarm', fmt=".2f", linewidths=0.8)
-plt.title('Covariance Matrix Heatmap')
-plt.tight_layout()
-plt.show()
 
 
 print(len(df))
@@ -88,14 +65,13 @@ Adding AQI Labels from these Sources Below.
 "https://document.airnow.gov"
 ===============
 """
+
 df = df.dropna()
 df.drop_duplicates(inplace=True)
 df['Date'] = pd.to_datetime(df['Date'])
 df['Month'] = df['Date'].dt.month
 df['Year'] = df['Date'].dt.year
 df['Day'] = df['Date'].dt.day
-#df = df.groupby(['Year','Month','State','Day','County','City']).mean(numeric_only=True)
-#df.reset_index(inplace=True)
 print(df)
 
 """
@@ -164,47 +140,36 @@ df['classification'] = np.select([df['Y'].between(0,50),
                                  df['Y'].between(201,300)]
                                 ,air_qual)
 
-"""
-=========
-Quad Plot
-=========
-"""
-temp_df = df.groupby(['Year']).mean(numeric_only=True)
-temp_df.reset_index(inplace=True)
 
-#print(f'{temp_df["Year"]}')
-units = {'O3':'PPM','NO2':'PPB','SO2':'PPB','CO':'PPM'}
-plt.figure()
-plt.tight_layout()
-fiq,axs = plt.subplots(2,2)
-axs[0,0].plot(temp_df['Year'],temp_df['CO Mean'],'tab:orange')
-axs[0,0].set_title('CO Mean PPM')
-
-axs[0,1].plot(temp_df['Year'],temp_df['O3 Mean'],'tab:green')
-axs[0,1].set_title('O3 Mean PPM')
-
-axs[1,0].plot(temp_df['Year'],temp_df['SO2 Mean'],'tab:red')
-axs[1,0].set_title('SO2 Mean PPB')
-
-axs[1,1].plot(temp_df['Year'],temp_df['NO2 Mean'])
-axs[1,1].set_title('NO2 Mean PPB')
-plt.tight_layout()
-plt.show()
 #%%
 """
 Setting Date
 """
 shuffle = False
-#print(f'Before Rolling {len(df)}')
 #df['days_since_start'] = (df['Date'] - pd.to_datetime('2017-01-01')).dt.days
 
-df = df[(df['Date'] >= '2018-01-01')]
-df['days_since_start'] = (df['Date'] - pd.to_datetime('2018-01-01')).dt.days
-
+df = df[(df['Date'] >= '2017-01-01')]
+df['days_since_start'] = (df['Date'] - pd.to_datetime('2017-01-01')).dt.days
 #print(len(df))
 #df = df[(df['Date'] >= '2020-06-01')]
 df.reset_index(inplace=True,drop=True)
 
+"""
+=========================
+Removing Outliers Z-scores
+=========================
+"""
+threshold = 2.5
+numeric = df.select_dtypes(include=np.number)
+z_scores = stats.zscore(numeric)
+
+outliers = numeric[abs(z_scores) > threshold]
+outliers.dropna(axis=0,how='all',inplace=True)
+outliers.dropna(axis=1,how='all',inplace=True)
+print(outliers.describe)
+df = df[(df['AQI'] > 20)]
+
+print(len(df))
 """
 ========================
 Dimensionality Reduction
@@ -216,7 +181,6 @@ Dimensionality Reduction
 Low Variance Filter
 ==================
 """
-numeric = df.select_dtypes(include=np.number)
 normalize = normalize(numeric)
 numeric_normalized = pd.DataFrame(normalize)
 var = numeric_normalized.var()
@@ -228,8 +192,6 @@ for i in range(len(numeric_col)):
     if var_normalized[i] < threshold:
         low_variance.append(numeric.columns[i])
 print(f'Low Variance Filtered Features {low_variance}')
-
-#df.drop(low_variance, inplace=True,axis=1)
 
 """
 =====
@@ -259,30 +221,54 @@ X['Day'] = norm.fit_transform(X['Day'].to_numpy().reshape(len(X['Day']),-1))
 norm.fit(X['Year'].to_numpy().reshape(len(X['Year']),-1))
 X['Year'] = norm.fit_transform(X['Year'].to_numpy().reshape(len(X['Year']),-1))
 
-removed_from_numerical = ['O3 Mean','O3 1st Max Value','CO Mean',
-                          'CO 1st Max Value', 'SO2 Mean','SO2 1st Max Value']
-
-numerical = ['O3 1st Max Hour', 'O3 AQI',
-        'CO 1st Max Hour', 'CO AQI',
-        'SO2 1st Max Hour', 'SO2 AQI', 'NO2 Mean',
-       'NO2 1st Max Value', 'NO2 1st Max Hour', 'NO2 AQI','AQI','days_since_start',
+numerical = ['O3 1st Max Hour',
+        'CO 1st Max Hour',
+        'SO2 1st Max Hour', 'NO2 Mean',
+       'NO2 1st Max Value', 'NO2 1st Max Hour',
              'O3 Mean', 'O3 1st Max Value', 'CO Mean','CO 1st Max Value', 'SO2 Mean',
-             'SO2 1st Max Value']
+             'SO2 1st Max Value','days_since_start']
 
 
-std = StandardScaler()
+std1 = StandardScaler()
 for s in numerical:
-    std.fit(X[s].to_numpy().reshape(len(X[s]),-1))
-    X[s] = std.fit_transform(X[s].to_numpy().reshape(len(X[s]),-1))
+    std1.fit(X[s].to_numpy().reshape(len(X[s]),-1))
+    X[s] = std1.fit_transform(X[s].to_numpy().reshape(len(X[s]),-1))
+std = StandardScaler()
 
 std.fit(X['Y'].to_numpy().reshape(len(X['Y']),-1))
 X['Y'] = std.fit_transform(X['Y'].to_numpy().reshape(len(X['Y']),-1))
+
 y = X['Y']
+
+std3 = StandardScaler()
+std3.fit(X['AQI'].to_numpy().reshape(len(X['AQI']),-1))
+X['AQI'] = std3.fit_transform(X['AQI'].to_numpy().reshape(len(X['AQI']),-1))
+
+co = StandardScaler()
+co.fit(X['CO AQI'].to_numpy().reshape(len(X['CO AQI']),-1))
+X['CO AQI'] =co.fit_transform(X['CO AQI'].to_numpy().reshape(len(X['CO AQI']),-1))
+
+so2 = StandardScaler()
+so2.fit(X['SO2 AQI'].to_numpy().reshape(len(X['SO2 AQI']),-1))
+X['SO2 AQI'] = so2.fit_transform(X['SO2 AQI'].to_numpy().reshape(len(X['SO2 AQI']),-1))
+
+o3 = StandardScaler()
+o3.fit(X['O3 AQI'].to_numpy().reshape(len(X['O3 AQI']),-1))
+X['O3 AQI'] = o3.fit_transform(X['O3 AQI'].to_numpy().reshape(len(X['O3 AQI']),-1))
+
+no2 = StandardScaler()
+no2.fit(X['NO2 AQI'].to_numpy().reshape(len(X['NO2 AQI']),-1))
+X['NO2 AQI'] = no2.fit_transform(X['NO2 AQI'].to_numpy().reshape(len(X['NO2 AQI']),-1))
+
+
+
 X.drop(columns=['Y','County','City'],inplace=True,axis=1)
 X = pd.get_dummies(X,drop_first=True,dtype='int')
-
 X = sm.add_constant(X)
 copy_of_x = X.copy()
+
+
+print(X.keys())
 
 """
 =========
@@ -290,33 +276,94 @@ Dropping low variance features
 ==========
 """
 
+
 """
-======================
-Data Imbalance Used SMOTE
-======================
+=========================|
+Data Imbalance Used ADASYN 
+=========================|
 """
-sns.countplot(x=df['classification'],data=df)
+"""sns.countplot(x=df['classification'],data=df)
 plt.title('Countplot of Target')
 plt.tight_layout()
 plt.show()
 
-from imblearn.over_sampling import SMOTE,ADASYN
-oversample = ADASYN(sampling_strategy='auto',n_jobs=n_jobs)
-X = pd.concat([X,y],axis=1)
+from imblearn.over_sampling import ADASYN,SMOTE
+oversample = SMOTE(sampling_strategy='auto',n_jobs=n_jobs)#n_neighbors=5
+X.drop(columns=['AQI'],inplace=True,axis=1)
+#X = pd.concat([X,y],axis=1)
+print(X)
 X, y_class = oversample.fit_resample(X, y_class)
 X['y_class'] = y_class
-X.sort_values(['days_since_start'],axis=0,inplace=True)
-y = X['Y']
-y_class = X['y_class']
-X.drop(columns=['Y','y_class'],inplace=True,axis=1)
+X.sort_values(['Year','days_since_start'],axis=0,inplace=True)
 
+
+y_class = X['y_class']
+X.drop(columns=['y_class'],inplace=True,axis=1)
+
+
+X['O3 AQI'] = o3.inverse_transform(X['O3 AQI'].to_numpy().reshape(len(X),1))
+X['CO AQI'] = co.inverse_transform(X['CO AQI'].to_numpy().reshape(len(X),1))
+X['SO2 AQI'] = so2.inverse_transform(X['SO2 AQI'].to_numpy().reshape(len(X),1))
+X['NO2 AQI'] = no2.inverse_transform(X['NO2 AQI'].to_numpy().reshape(len(X),1))
+
+X['AQI'] = X[['O3 AQI','CO AQI','SO2 AQI','NO2 AQI']].max(axis=1)
+
+X['Y'] = X['AQI'].shift(-1)
+X.drop(X.tail(1).index,inplace=True)
+y = X['Y']
+X.drop(columns=['Y'], inplace=True, axis=1)
+
+std90 = StandardScaler()
+std90.fit(y.to_numpy().reshape(len(X['AQI']),-1))
+std90.fit_transform(y.to_numpy().reshape(len(y),-1))
+
+
+std = StandardScaler()
+std.fit(X['AQI'].to_numpy().reshape(len(X['AQI']),-1))
+X['AQI'] = std.fit_transform(X['AQI'].to_numpy().reshape(len(X['AQI']),-1))
+"""
+"""
+Restandardizing
+"""
+co = StandardScaler()
+co.fit(X['CO AQI'].to_numpy().reshape(len(X['CO AQI']),-1))
+X['CO AQI'] =co.fit_transform(X['CO AQI'].to_numpy().reshape(len(X['CO AQI']),-1))
+so2 = StandardScaler()
+so2.fit(X['SO2 AQI'].to_numpy().reshape(len(X['SO2 AQI']),-1))
+X['SO2 AQI'] = so2.fit_transform(X['SO2 AQI'].to_numpy().reshape(len(X['SO2 AQI']),-1))
+o3 = StandardScaler()
+o3.fit(X['O3 AQI'].to_numpy().reshape(len(X['O3 AQI']),-1))
+X['O3 AQI'] = o3.fit_transform(X['O3 AQI'].to_numpy().reshape(len(X['O3 AQI']),-1))
+no2 = StandardScaler()
+no2.fit(X['NO2 AQI'].to_numpy().reshape(len(X['NO2 AQI']),-1))
+X['NO2 AQI'] = no2.fit_transform(X['NO2 AQI'].to_numpy().reshape(len(X['NO2 AQI']),-1))
+
+
+
+print(X.keys())
+
+"""
+===============
+Checking Resampling
+===============
+"""
+"""#print(std.inverse_transform(y.to_numpy().reshape(len(y),1))[0])
+#print(std3.inverse_transform(X['AQI'].to_numpy().reshape(len(X),1))[1])
+#print(std1.inverse_transform(X['days_since_start'].to_numpy().reshape(len(X),1)))
 
 print(f'LEN X: {len(X)}')
-print(f'LEN Y:{len(y)}')
+print(f'LEN Y: {len(y)}')
 sns.countplot(x=y_class,data=df)
 plt.title('Countplot of Target')
 plt.tight_layout()
 plt.show()
+"""
+
+
+"""
+Low Variance Droppings
+"""
+X.drop(low_variance, inplace=True,axis=1)
 copy_of_x = X.copy()
 
 #%%
@@ -344,8 +391,6 @@ while not under_ten:
     removed.append(t['feature'].item())
 removed.append('CO_AQI_label')
 X.drop('CO_AQI_label',inplace=True,axis=1)
-removed.append('SO2_AQI_label')
-X.drop('SO2_AQI_label',inplace=True,axis=1)
 
 vif_data1 = pd.DataFrame()
 vif_data1['feature'] = X.columns
@@ -357,7 +402,7 @@ X = sm.add_constant(X)
 #print(X.columns)
 copy_of_x = X.copy()
 vif_dropped = removed
-#X = sm.add_constant(X)
+
 
 """
 ======================
@@ -412,7 +457,7 @@ predictions_rev = std.inverse_transform(predictions.reshape(len(X_test),1))
 actual = std.inverse_transform(y_test.to_numpy().reshape(len(X_test),1))
 point1 = actual.min()
 point2 = actual.max()
-plt.figure(figsize=(30,5))
+plt.figure(figsize=(15,5))
 sns.lineplot(x=np.arange(0,len(predictions),1),y=predictions_rev.reshape(len(X_test),),label='Predicted')
 sns.lineplot(x=np.arange(0,len(actual),1),y=actual.reshape(len(X_test),),label='Actual',alpha=0.4,color='red')
 plt.xlabel('N Observations')
@@ -463,7 +508,6 @@ print(f'VIF DROPPED: {vif_dropped}')
 
 
 dropped_features = list(set(dropped).intersection(low_variance))
-#dropped_features = list(set(dropped_features).intersection(vif_dropped))
 
 
 kept_features = ['AQI','days_since_start','O3_AQI_label','NO2 Mean']
@@ -481,12 +525,13 @@ Selected Features Pearson Correrlation
 """
 
 temp = X.copy()
-#temp.drop('O3_AQI_label',inplace=True,axis=1)
+temp.drop(['O3_AQI_label'],inplace=True,axis=1)
+
 
 features = temp.keys()
 pearson_corr = df[features]
 
-plt.figure(figsize=(10,10))
+plt.figure(figsize=(6,6))
 correlation_matrix = pearson_corr.corr(method='pearson')
 sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=".2f")
 plt.title('Selected Features Pearson Correlation Coefficients Heatmap Matrix Heatmap')
@@ -498,7 +543,7 @@ plt.show()
 Selected Features Covariance Matrix
 ========================================
 """
-plt.figure(figsize=(10,10))
+plt.figure(figsize=(6,6))
 sns.heatmap(temp.cov(), annot=True, cmap='coolwarm', fmt=".2f")
 plt.title('Selected Features Covariance Matrix Heatmap')
 plt.tight_layout()
@@ -506,4 +551,4 @@ plt.show()
 
 X = df[X.keys()]
 X['Y'] = df['Y']
-#X.to_csv('cleaned_aqi.csv',index=False)
+X.to_csv('cleaned_aqi.csv',index=False)
