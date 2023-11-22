@@ -49,7 +49,7 @@ for s in removed_states:
     df = df[(df['State'] != s)]
 
 
-
+print(df['NO2 Mean'])
 print(len(df))
 
 "PPM = Parts Per Million"
@@ -550,5 +550,7 @@ plt.tight_layout()
 plt.show()
 
 X = df[X.keys()]
+print(X)
+
 X['Y'] = df['Y']
-X.to_csv('cleaned_aqi.csv',index=False)
+#X.to_csv('cleaned_aqi.csv',index=False)
