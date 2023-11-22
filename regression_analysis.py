@@ -13,6 +13,7 @@ from sklearn.linear_model import LinearRegression
 from prettytable import PrettyTable
 from sklearn.pipeline import make_pipeline
 from sklearn.model_selection import GridSearchCV
+from sklearn.svm import LinearSVR
 import warnings
 warnings.filterwarnings("ignore")
 n_jobs = -1
@@ -176,7 +177,7 @@ plt.show()
 Polynomial Regression Here
 ============================
 """
-X.drop('O3_AQI_label',inplace=True,axis=1)
+"""X.drop('O3_AQI_label',inplace=True,axis=1)
 param_grid = {'polynomialfeatures__degree':np.arange(1,5,1)}
 def PolyNomialRegression(degree=2):
     return make_pipeline(PolynomialFeatures(degree),LinearRegression(n_jobs=n_jobs))
@@ -190,15 +191,31 @@ pr = PolynomialFeatures(degree=poly_grid.best_params_['polynomialfeatures__degre
 X_train,X_test,y_train,y_test = train_test_split(X,y,test_size=.2 ,shuffle=shuffle)
 X_train = pr.fit_transform(X_train)
 X_test = pr.fit_transform(X_test)
+
+
 model = sm.OLS(y_train,X_train).fit()
 predictions_rev = std.inverse_transform(predictions.reshape(len(predictions),1))
 actual = y_test
 actual = std.inverse_transform(actual.reshape(len(actual),1))
 print(mean_squared_error(predictions_rev,actual,squared=False))
-mse_list = np.square(abs(poly_grid.cv_results_['mean_test_score']))
+print(model.summary())
+"""
+"""
+FINISH THIS PART DO WHAT I DID FROM HOME WORK 3
+"""
 
 """
 ================
-SVR 
+LinearSVR 
 ================
 """
+param_grid = {'loss':['epsilon_insensitive', 'squared_epsilon_insensitive']
+    ,'C':np.arange(1.0,5.0,.5),'intercept_scaling':np.arange(1.0,5.0,.5)}
+
+X = copy_x.copy()
+SVR_Grid = GridSearchCV(LinearSVR(dual='auto'),param_grid,verbose=3,
+                        n_jobs=n_jobs,scoring='neg_mean_squared_error')
+
+SVR_Grid.fit(X,y.ravel())
+print(SVR_Grid.best_params_)
+"{'C': 4.5, 'intercept_scaling': 4.5, 'loss': 'squared_epsilon_insensitive'}"
