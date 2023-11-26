@@ -88,6 +88,21 @@ df['Season'] = np.select([df['Month'].between(3,5),
                          )
 
 """
+=========================
+Removing Outliers Z-scores
+=========================
+"""
+threshold = 2.5
+numeric = df.select_dtypes(include=np.number)
+z_scores = stats.zscore(numeric)
+
+outliers = numeric[abs(z_scores) > threshold]
+outliers.dropna(axis=0,how='all',inplace=True)
+outliers.dropna(axis=1,how='all',inplace=True)
+print(outliers.describe)
+
+
+"""
 ==========================================
 Highest AQI Value is the actual AQI value.
 ==========================================
@@ -95,6 +110,7 @@ Highest AQI Value is the actual AQI value.
 "New Feature Name: Chosen AQI"
 "AQI value is chosen from the max AQI value of the 3."
 df['AQI'] = df[['O3 AQI','CO AQI','SO2 AQI','NO2 AQI']].max(axis=1)
+df = df[(df['AQI'] > 20)]
 df['Y'] = df['AQI'].shift(-1)
 df.drop(df.tail(1).index,inplace=True)
 
@@ -154,20 +170,8 @@ df['days_since_start'] = (df['Date'] - pd.to_datetime('2017-01-01')).dt.days
 #df = df[(df['Date'] >= '2020-06-01')]
 df.reset_index(inplace=True,drop=True)
 
-"""
-=========================
-Removing Outliers Z-scores
-=========================
-"""
-threshold = 2.5
-numeric = df.select_dtypes(include=np.number)
-z_scores = stats.zscore(numeric)
 
-outliers = numeric[abs(z_scores) > threshold]
-outliers.dropna(axis=0,how='all',inplace=True)
-outliers.dropna(axis=1,how='all',inplace=True)
-print(outliers.describe)
-df = df[(df['AQI'] > 20)]
+
 
 print(len(df))
 """
@@ -553,4 +557,4 @@ X = df[X.keys()]
 print(X)
 
 X['Y'] = df['Y']
-#X.to_csv('cleaned_aqi.csv',index=False)
+X.to_csv('cleaned_aqi.csv',index=False)

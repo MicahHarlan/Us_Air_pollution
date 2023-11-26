@@ -65,20 +65,30 @@ print(f'Stepwise FEATURES REMOVED: {len(removed)}')
 step_wise = removed
 print(model.summary())
 
-
 plt.figure(figsize=(10,4))
+fig,axs = plt.subplots(2,1)
 predictions = model.predict(X_test)
 predictions_rev = y_std.inverse_transform(predictions.to_numpy().reshape(len(X_test),1))
 actual = y_std.inverse_transform(y_test.reshape(len(X_test),1))
-#test = y_std.inverse_transform(y_train.reshape(len(y_train),1))
-sns.lineplot(x=np.arange(0,len(predictions),1),y=predictions_rev.reshape(len(X_test),),label='Predicted')
-sns.lineplot(x=np.arange(0,len(actual),1),y=actual.reshape(len(X_test),),label='Actual',alpha=0.4,color='red')
-#sns.lineplot(x=np.arange(0,len(y_train),1),y=actual.reshape(len(y_test),),label='y_train',alpha=0.4,color='green')
-plt.xlabel('N Observations')
-plt.ylabel('Actual Value')
-plt.title(f'Backwards Stepwise: Actual vs. Predicted Value RMSE: {round(mean_squared_error(actual,predictions_rev,squared=False),2)}')
-plt.legend()
-plt.show()
+
+sns.lineplot(ax=axs[0],x=np.arange(0,len(predictions),1),y=predictions_rev.reshape(len(X_test),),label='Predicted')
+sns.lineplot(ax=axs[0],x=np.arange(0,len(actual),1),y=actual.reshape(len(X_test),),label='Actual',alpha=0.4,color='red')
+axs[0].set_xlabel('N Observations')
+axs[0].set_ylabel('Actual Value')
+axs[0].set_title(f'Backwards Stepwise: Actual vs. Predicted Value RMSE: {round(mean_squared_error(actual,predictions_rev,squared=False),2)}')
+
+
+test_predictions = model.predict(X_train)
+test = y_std.inverse_transform(test_predictions.to_numpy().reshape(len(test_predictions),1))
+actual2 = y_std.inverse_transform(y_train.reshape(len(y_train),1))
+sns.lineplot(ax=axs[1],x=np.arange(0,len(test),1),y=test.reshape(len(test),),label='Train Set Predicted')
+sns.lineplot(ax=axs[1],x=np.arange(0,len(actual2),1),y=actual2.reshape(len(y_train),),label='Train Actual',alpha=0.4,color='red')
+axs[1].set_xlabel('N Observations')
+axs[1].set_ylabel('Actual Value')
+axs[1].set_title(f'Backwards Stepwise: Actual vs. Predicted Value RMSE: {round(mean_squared_error(actual2,test,squared=False),2)}')
+
+fig.tight_layout()
+fig.show()
 
 
 
@@ -108,6 +118,7 @@ features = X.columns
 indices = np.argsort(importances)
 rand_kept = X.columns
 importances = rf.feature_importances_
+plt.figure()
 plt.title(f'Feature Importance')
 plt.barh(range(len(indices)),importances[indices],color='b',align='center')
 plt.yticks(range(len(indices)),[features[i] for i in indices])
