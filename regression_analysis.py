@@ -1,4 +1,3 @@
-import pandas
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -71,8 +70,8 @@ predictions = model.predict(X_test)
 predictions_rev = y_std.inverse_transform(predictions.to_numpy().reshape(len(X_test),1))
 actual = y_std.inverse_transform(y_test.reshape(len(X_test),1))
 
-sns.lineplot(ax=axs[0],x=np.arange(0,len(predictions),1),y=predictions_rev.reshape(len(X_test),),label='Predicted')
-sns.lineplot(ax=axs[0],x=np.arange(0,len(actual),1),y=actual.reshape(len(X_test),),label='Actual',alpha=0.4,color='red')
+sns.lineplot(ax=axs[0],x=np.arange(0,len(predictions),1),y=predictions_rev.reshape(len(X_test),),label='Predicted',color='blue')
+sns.lineplot(ax=axs[0],x=np.arange(0,len(actual),1),y=actual.reshape(len(X_test),),label='Actual',alpha=0.4,color='green')
 axs[0].set_xlabel('N Observations')
 axs[0].set_ylabel('Actual Value')
 axs[0].set_title(f'Backwards Stepwise: Actual vs. Predicted Value RMSE: {round(mean_squared_error(actual,predictions_rev,squared=False),2)}')
@@ -81,8 +80,8 @@ axs[0].set_title(f'Backwards Stepwise: Actual vs. Predicted Value RMSE: {round(m
 test_predictions = model.predict(X_train)
 test = y_std.inverse_transform(test_predictions.to_numpy().reshape(len(test_predictions),1))
 actual2 = y_std.inverse_transform(y_train.reshape(len(y_train),1))
-sns.lineplot(ax=axs[1],x=np.arange(0,len(test),1),y=test.reshape(len(test),),label='Train Set Predicted')
-sns.lineplot(ax=axs[1],x=np.arange(0,len(actual2),1),y=actual2.reshape(len(y_train),),label='Train Actual',alpha=0.4,color='red')
+sns.lineplot(ax=axs[1],x=np.arange(0,len(test),1),y=test.reshape(len(test),),label='Train Set Predicted',color='blue')
+sns.lineplot(ax=axs[1],x=np.arange(0,len(actual2),1),y=actual2.reshape(len(y_train),),label='Train Actual',alpha=0.4,color='green')
 axs[1].set_xlabel('N Observations')
 axs[1].set_ylabel('Actual Value')
 axs[1].set_title(f'Backwards Stepwise: Actual vs. Predicted Value RMSE: {round(mean_squared_error(actual2,test,squared=False),2)}')
@@ -137,8 +136,8 @@ predictions_rev = y_std.inverse_transform(predictions.reshape(len(X_test),1))
 actual = y_std.inverse_transform(y_test.reshape(len(X_test),1))
 
 plt.figure(figsize=(10,4))
-sns.lineplot(x=np.arange(0,len(predictions),1),y=predictions_rev.reshape(len(X_test),),label='Predicted')
-sns.lineplot(x=np.arange(0,len(actual),1),y=actual.reshape(len(X_test),),label='Actual',alpha=0.4,color='red')
+sns.lineplot(x=np.arange(0,len(predictions),1),y=predictions_rev.reshape(len(X_test),),label='Predicted',color='blue')
+sns.lineplot(x=np.arange(0,len(actual),1),y=actual.reshape(len(X_test),),label='Actual',alpha=0.4,color='green')
 plt.xlabel('N Observations')
 plt.ylabel('Actual Value')
 plt.title(f'Random Forest: Actual vs. Predicted Value RMSE: {round(mean_squared_error(actual,predictions_rev,squared=False),2)}')
@@ -203,8 +202,8 @@ print(f'RF with best Params MSE: {round(mean_squared_error(actual,predictions_re
 
 
 plt.figure(figsize=(10,4))
-sns.lineplot(x=np.arange(0,len(predictions),1),y=predictions_rev.reshape(len(X_test),),label='Predicted')
-sns.lineplot(x=np.arange(0,len(actual),1),y=actual.reshape(len(X_test),),label='Actual',alpha=0.4,color='red')
+sns.lineplot(x=np.arange(0,len(predictions),1),y=predictions_rev.reshape(len(X_test),),label='Predicted',color='blue')
+sns.lineplot(x=np.arange(0,len(actual),1),y=actual.reshape(len(X_test),),label='Actual',alpha=0.4,color='green')
 plt.xlabel('N Observations')
 plt.ylabel('Actual Value')
 plt.title(f'Best Params Random Forest: Actual vs. Predicted Value RMSE: {round(mean_squared_error(actual,predictions_rev,squared=False),2)}')
@@ -241,8 +240,8 @@ actual = y_std.inverse_transform(actual.reshape(len(actual),1))
 print(round(mean_squared_error(actual,predictions_rev,squared=False),2))
 
 plt.figure(figsize=(10,4))
-sns.lineplot(x=np.arange(0,len(predictions),1),y=predictions_rev.reshape(len(X_test),),label='Predicted')
-sns.lineplot(x=np.arange(0,len(actual),1),y=actual.reshape(len(X_test),),label='Actual',alpha=0.4,color='red')
+sns.lineplot(x=np.arange(0,len(predictions),1),y=predictions_rev.reshape(len(X_test),),label='Predicted',color='blue')
+sns.lineplot(x=np.arange(0,len(actual),1),y=actual.reshape(len(X_test),),label='Actual',alpha=0.4,color='green')
 plt.xlabel('N Observations')
 plt.ylabel('Actual Value')
 plt.title(f'Polynomial: Actual vs. Predicted Value RMSE: {round(mean_squared_error(actual,predictions_rev,squared=False),2)}')
@@ -269,7 +268,7 @@ LinearSVR
 LinSVR MSE: 10.1
 """
 param_grid = {'loss':['epsilon_insensitive', 'squared_epsilon_insensitive']
-    ,'C':np.arange(0.0,1,.5),'intercept_scaling':np.arange(0.0,1,.5),'epsilon':np.arange(0.0,1,.5)}
+    ,'C':np.arange(0.0,2,.5),'intercept_scaling':np.arange(0.0,2,.5),'epsilon':np.arange(0.0,2,.5)}
 X = copy_x.copy()
 SVR_Grid = GridSearchCV(LinearSVR(dual=True,max_iter=10000),param_grid,verbose=0,
                       n_jobs=n_jobs,scoring='neg_mean_squared_error',cv=tscv,)
@@ -289,8 +288,8 @@ predictions_rev = y_std.inverse_transform(predictions.reshape(len(predictions),1
 actual = y_std.inverse_transform(y_test.reshape(len(y_test),1))
 print(f'LinSVR MSE: {round(mean_squared_error(actual,predictions_rev,squared=False),2)}')
 plt.figure(figsize=(10,4))
-sns.lineplot(x=np.arange(0,len(predictions),1),y=predictions_rev.reshape(len(X_test),),label='Predicted')
-sns.lineplot(x=np.arange(0,len(actual),1),y=actual.reshape(len(X_test),),label='Actual',alpha=0.4,color='red')
+sns.lineplot(x=np.arange(0,len(predictions),1),y=predictions_rev.reshape(len(X_test),),label='Predicted',color='blue')
+sns.lineplot(x=np.arange(0,len(actual),1),y=actual.reshape(len(X_test),),label='Actual',alpha=0.4,color='green')
 plt.xlabel('N Observations')
 plt.ylabel('Actual Value')
 plt.title(f'Linear SVM: Actual vs. Predicted Value RMSE: {round(mean_squared_error(actual,predictions_rev,squared=False),2)}')
@@ -325,8 +324,8 @@ predictions_rev = y_std.inverse_transform(predictions.reshape(len(predictions),1
 actual = y_std.inverse_transform(y_test.reshape(len(y_test),1))
 print(f'KNN MSE: {round(mean_squared_error(actual,predictions_rev,squared=False),2)}')
 plt.figure(figsize=(10,4))
-sns.lineplot(x=np.arange(0,len(predictions),1),y=predictions_rev.reshape(len(X_test),),label='Predicted')
-sns.lineplot(x=np.arange(0,len(actual),1),y=actual.reshape(len(X_test),),label='Actual',alpha=0.4,color='red')
+sns.lineplot(x=np.arange(0,len(predictions),1),y=predictions_rev.reshape(len(X_test),),label='Predicted',color='blue')
+sns.lineplot(x=np.arange(0,len(actual),1),y=actual.reshape(len(X_test),),label='Actual',alpha=0.4,color='green')
 plt.xlabel('N Observations')
 plt.ylabel('Actual Value')
 plt.title(f'KNN: Actual vs. Predicted Value RMSE: {round(mean_squared_error(actual,predictions_rev,squared=False),2)}')

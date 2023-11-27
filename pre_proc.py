@@ -162,14 +162,11 @@ df['classification'] = np.select([df['Y'].between(0,50),
 Setting Date
 """
 shuffle = False
-#df['days_since_start'] = (df['Date'] - pd.to_datetime('2017-01-01')).dt.days
-
 df = df[(df['Date'] >= '2017-01-01')]
 df['days_since_start'] = (df['Date'] - pd.to_datetime('2017-01-01')).dt.days
-#print(len(df))
-#df = df[(df['Date'] >= '2020-06-01')]
 df.reset_index(inplace=True,drop=True)
 
+#df.to_csv('classification.csv',index=False)
 
 
 
@@ -281,51 +278,7 @@ Dropping low variance features
 """
 
 
-"""
-=========================|
-Data Imbalance Used ADASYN 
-=========================|
-"""
-"""sns.countplot(x=df['classification'],data=df)
-plt.title('Countplot of Target')
-plt.tight_layout()
-plt.show()
 
-from imblearn.over_sampling import ADASYN,SMOTE
-oversample = SMOTE(sampling_strategy='auto',n_jobs=n_jobs)#n_neighbors=5
-X.drop(columns=['AQI'],inplace=True,axis=1)
-#X = pd.concat([X,y],axis=1)
-print(X)
-X, y_class = oversample.fit_resample(X, y_class)
-X['y_class'] = y_class
-X.sort_values(['Year','days_since_start'],axis=0,inplace=True)
-
-
-y_class = X['y_class']
-X.drop(columns=['y_class'],inplace=True,axis=1)
-
-
-X['O3 AQI'] = o3.inverse_transform(X['O3 AQI'].to_numpy().reshape(len(X),1))
-X['CO AQI'] = co.inverse_transform(X['CO AQI'].to_numpy().reshape(len(X),1))
-X['SO2 AQI'] = so2.inverse_transform(X['SO2 AQI'].to_numpy().reshape(len(X),1))
-X['NO2 AQI'] = no2.inverse_transform(X['NO2 AQI'].to_numpy().reshape(len(X),1))
-
-X['AQI'] = X[['O3 AQI','CO AQI','SO2 AQI','NO2 AQI']].max(axis=1)
-
-X['Y'] = X['AQI'].shift(-1)
-X.drop(X.tail(1).index,inplace=True)
-y = X['Y']
-X.drop(columns=['Y'], inplace=True, axis=1)
-
-std90 = StandardScaler()
-std90.fit(y.to_numpy().reshape(len(X['AQI']),-1))
-std90.fit_transform(y.to_numpy().reshape(len(y),-1))
-
-
-std = StandardScaler()
-std.fit(X['AQI'].to_numpy().reshape(len(X['AQI']),-1))
-X['AQI'] = std.fit_transform(X['AQI'].to_numpy().reshape(len(X['AQI']),-1))
-"""
 """
 Restandardizing
 """
@@ -554,7 +507,8 @@ plt.tight_layout()
 plt.show()
 
 X = df[X.keys()]
+print(f' {X.keys()}')
 print(X)
 
 X['Y'] = df['Y']
-X.to_csv('cleaned_aqi.csv',index=False)
+#X.to_csv('cleaned_aqi.csv',index=False)
