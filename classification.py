@@ -2,6 +2,13 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+
+"DELETE"
+from sklearnex import patch_sklearn
+patch_sklearn()
+from sklearn.naive_bayes import GaussianNB
+from sklearn.naive_bayes import CategoricalNB
+
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler,LabelEncoder
 from sklearn.model_selection import train_test_split,TimeSeriesSplit,GridSearchCV
@@ -14,11 +21,14 @@ from sklearn.svm import SVC,LinearSVC
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
 
+
+
+
 import warnings
 warnings.filterwarnings("ignore")
 n_jobs = -1
 shuffle = False
-tscv = TimeSeriesSplit(n_splits=10)
+tscv = TimeSeriesSplit(n_splits=5)
 df = (pd.read_csv('classification.csv'))
 y = df['classification']
 features_list = ['Year','CO Mean', 'SO2 Mean', 'NO2 Mean', 'NO2 1st Max Hour', 'AQI',
@@ -121,7 +131,7 @@ param_grid = {'penalty':['l1', 'l2','elasticnet', None],
 
 lg_grid = GridSearchCV(LogisticRegression(n_jobs=n_jobs,max_iter=100000),
                        cv=tscv,param_grid=param_grid,n_jobs=n_jobs,verbose=1)
-
+"""
 lg_grid.fit(X,y)
 lg_grid_result = lg_grid.best_params_
 print(lg_grid_result)
@@ -154,17 +164,18 @@ print(f'ACCURACY: {round(accuracy_score(y_test,lg2.predict(X_test)),3)}')
 print(f'F1 with micro avg: {round(f1_score(y_test,lg2.predict(X_test), average="micro"),3)}')
 print(f'F1 with macro avg: {round(f1_score(y_test,lg2.predict(X_test), average="macro"),3)}')
 print('================================================================================================')
-
+"""
 
 """
 ====================
 Decision Tree
 ====================
 """
-print('================================================================================================')
+"""print('================================================================================================')
 dt = DecisionTreeClassifier()
 dt.fit(X_train,y_train)
 pred = dt.predict(X_test)
+range = [0.0,0.01,0.02,0.03]
 print('DECISION TREE')
 print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
 print(f'F1 with micro avg: {round(f1_score(y_test,pred, average="micro"),3)}')
@@ -172,23 +183,23 @@ print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
 param_grid = {'criterion':['gini', 'entropy','log_loss'],
               'splitter':['best', 'random'],
               'max_features':['auto', 'sqrt', 'log2'],
-              'min_weight_fraction_leaf':np.arange(0,5,.5),
-              'min_samples_leaf':np.arange(0,10,1),
-              'min_impurity_decrease':np.arange(0,5,.5),
-              'ccp_alpha':np.arange(0,5,.5)}
+              'min_weight_fraction_leaf':range,
+              'min_samples_leaf':np.arange(0,5,1),
+              'min_impurity_decrease':range,
+              'ccp_alpha':range,'min_samples_split':np.arange(2,3,1)}
 
 dt_grid = GridSearchCV(DecisionTreeClassifier(),
                        cv=tscv,param_grid=param_grid,n_jobs=n_jobs,verbose=1)
-
+#
 dt_grid.fit(X,y.ravel())
 dt_grid_result = dt_grid.best_params_
 print(dt_grid.best_params_)
 dt = DecisionTreeClassifier(
                         criterion=dt_grid_result['criterion'],
                         splitter=dt_grid_result['splitter'],max_features=dt_grid_result['max_features'],
-    min_samples_split=dt_grid_result['min_weight_fraction_leaf'],
+    min_weight_fraction_leaf=dt_grid_result['min_weight_fraction_leaf'],
     min_samples_leaf=dt_grid_result['min_samples_leaf'],min_impurity_decrease=dt_grid_result['min_impurity_decrease'],
-ccp_alpha=dt_grid_result['ccp_alpha'])
+ccp_alpha=dt_grid_result['ccp_alpha'],min_samples_split=dt_grid_result['min_samples_split'])
 
 dt.fit(X_train,y_train)
 pred = dt.predict(X_test)
@@ -197,15 +208,15 @@ print('After Grid Search Decision Tree')
 print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
 print(f'F1 with micro avg: {round(f1_score(y_test,pred, average="micro"),3)}')
 print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
-
 print('================================================================================================')
+"""
+
 """
 ====================
 KNN
 ====================
 """
 print('================================================================================================')
-
 knn = KNeighborsClassifier(n_jobs=n_jobs)
 knn.fit(X_train,y_train)
 pred = knn.predict(X_test)
@@ -214,18 +225,35 @@ print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
 print(f'F1 with micro avg: {round(f1_score(y_test,pred, average="micro"),3)}')
 print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
 
-
-param_grid = {'n_neighbors':np.arange(3,101,3),'weights':['uniform', 'distance'],'p':np.arange(1,25,1),
+"""param_grid = {'weights':['uniform', 'distance'],
               'algorithm':['ball_tree', 'kd_tree', 'brute']}
 KNN_GRID = GridSearchCV(KNeighborsClassifier(n_jobs=n_jobs),param_grid,verbose=1,
-                      n_jobs=n_jobs,scoring='accuracy',cv=tscv,)
+                      n_jobs=n_jobs,scoring='accuracy',cv=tscv)
+KNN_GRID.fit(X,y.ravel())
+knn_best2 = KNN_GRID.best_params_
+print(knn_best2)
+
+param_grid = {'p':[1,2,3]}
+KNN_GRID = GridSearchCV(KNeighborsClassifier(n_jobs=n_jobs,weights=knn_best2['weights'],
+                                             algorithm=knn_best2['algorithm']),param_grid,verbose=1,
+                      n_jobs=n_jobs,scoring='accuracy',cv=tscv)
+KNN_GRID.fit(X,y.ravel())
+knn_best3 = KNN_GRID.best_params_
+print(knn_best3)
+
+param_grid = {'n_neighbors':np.arange(5,20,1)}
+KNN_GRID = GridSearchCV(KNeighborsClassifier(n_jobs=n_jobs,weights=knn_best2['weights'],
+                                             algorithm=knn_best2['algorithm'],p=knn_best3['p']),param_grid,verbose=1,
+                      n_jobs=n_jobs,scoring='accuracy',cv=tscv)
 KNN_GRID.fit(X,y.ravel())
 knn_best = KNN_GRID.best_params_
 print(knn_best)
+
 knn = KNeighborsClassifier(n_jobs=n_jobs,n_neighbors=knn_best['n_neighbors']
-                           ,weights=knn_best['weights'],p=knn_best['p'],algorithm=knn_best['algorithm'])
+                           ,weights=knn_best2['weights'],algorithm=knn_best2['algorithm'],p=knn_best3['p'])
 knn.fit(X_train,y_train)
 pred = knn.predict(X_test)
+
 print('========================')
 print('After Grid Search KNN')
 print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
@@ -233,18 +261,68 @@ print(f'F1 with micro avg: {round(f1_score(y_test,pred, average="micro"),3)}')
 print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
 print('================================================================================================')
 
+"""
 
 """
 ====================
 SVM
 ====================
 """
+print('================================================================================================')
+print('SVM')
+"""
+svm = SVC(verbose=3)
+svm.fit(X_train,y_train)
+pred = svm.predict(X_test)
+print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
+print(f'F1 with micro avg: {round(f1_score(y_test,pred, average="micro"),3)}')
+print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
+ACCURACY: 0.517
+F1 with micro avg: 0.517
+F1 with macro avg: 0.519"""
+
+
+
+"""param_grid = {'kernel':["linear", "poly", "rbf", "sigmoid"]}
+SVM_GRID = GridSearchCV(SVC(),param_grid,verbose=0,
+                      n_jobs=n_jobs,scoring='accuracy',cv=tscv)
+SVM_GRID.fit(X,y.ravel())
+svm_best = SVM_GRID.best_params_
+print(svm_best)"""
+
+
+"""svm = SVC(kernel='linear',decision_function_shape='ovr')
+svm.fit(X_train,y_train)
+pred = svm.predict(X_test)
+print('========================')
+print('After Grid Search KNN')
+print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
+print(f'F1 with micro avg: {round(f1_score(y_test,pred, average="micro"),3)}')
+print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
+print('================================================================================================')
+"""
+
+print('================================================================================================')
+
 
 """
 ====================
 Naive Bayes
 ====================
 """
+print('================================================================================================')
+print('Gaussian NAIVE BAYES')
+nb = GaussianNB()
+nb.fit(X_train,y_train)
+pred = nb.predict(X_test)
+print('========================')
+print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
+print(f'F1 with micro avg: {round(f1_score(y_test,pred, average="micro"),3)}')
+print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
+print('================================================================================================')
+print('================================================================================================')
+
+
 
 """
 ====================
@@ -252,8 +330,37 @@ Random Forest
 ====================
 """
 
+
+
 """
 ====================
-Neural Network
+Multi Layered Perceptron
 ====================
 """
+from sklearn.neural_network import MLPClassifier
+mlp = MLPClassifier(verbose=True,activation='identity',shuffle=True)
+mlp.fit(X_train,y_train)
+pred = mlp.predict(X_test)
+print('========================')
+print('Multilayer Perceptron')
+print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
+print(f'F1 with micro avg: {round(f1_score(y_test,pred, average="micro"),3)}')
+print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
+
+param_grid = {'activation':['identity', 'logistic', 'tanh', 'relu'],'solver':['lbfgs', 'sgd', 'adam']}
+MLP_GRID = GridSearchCV(MLPClassifier(max_iter=700),param_grid,verbose=1,
+                      n_jobs=n_jobs,scoring='accuracy',cv=tscv)
+
+MLP_GRID.fit(X,y.ravel())
+mlp_best = MLP_GRID.best_params_
+print(mlp_best)
+
+mlp = MLPClassifier(activation=mlp_best['activation'],solver=mlp_best['solver'])
+mlp.fit(X_train,y_train)
+pred = mlp.predict(X_test)
+print('========================')
+print('After Grid Search MLP')
+print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
+print(f'F1 with micro avg: {round(f1_score(y_test,pred, average="micro"),3)}')
+print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
+print('================================================================================================')
