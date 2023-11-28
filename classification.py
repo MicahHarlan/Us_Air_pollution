@@ -320,7 +320,6 @@ print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
 print(f'F1 with micro avg: {round(f1_score(y_test,pred, average="micro"),3)}')
 print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
 print('================================================================================================')
-print('================================================================================================')
 
 
 
@@ -329,7 +328,43 @@ print('=========================================================================
 Random Forest
 ====================
 """
+print('================================================================================================')
+rf = RandomForestClassifier()
+rf.fit(X_train,y_train)
+pred = rf.predict(X_test)
+range = [0.0,0.01,0.02,0.03]
+print('Random Forest')
+print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
+print(f'F1 with micro avg: {round(f1_score(y_test,pred, average="micro"),3)}')
+print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
+param_grid = {'criterion':['gini', 'entropy','log_loss'],
+              'max_features':['auto', 'sqrt', 'log2'],
+              'min_weight_fraction_leaf':range,
+              'min_samples_leaf':np.arange(0,5,1),
+              'min_impurity_decrease':range,
+              'ccp_alpha':range,'min_samples_split':np.arange(2,3,1)}
 
+rf_grid = GridSearchCV(RandomForestClassifier(n_jobs=n_jobs,max_depth=10),
+                       cv=tscv,param_grid=param_grid,n_jobs=n_jobs,verbose=1)
+#
+rf_grid.fit(X,y.ravel())
+rf_grid_result = rf_grid.best_params_
+print(rf_grid.best_params_)
+dt = RandomForestClassifier(max_depth=10,
+                        criterion=rf_grid_result['criterion'],
+                        max_features=rf_grid_result['max_features'],
+    min_weight_fraction_leaf=rf_grid_result['min_weight_fraction_leaf'],
+    min_samples_leaf=rf_grid_result['min_samples_leaf'],min_impurity_decrease=rf_grid_result['min_impurity_decrease'],
+ccp_alpha=rf_grid_result['ccp_alpha'],min_samples_split=rf_grid_result['min_samples_split'])
+
+rf.fit(X_train,y_train)
+pred = rf.predict(X_test)
+print('========================')
+print('After Grid Search Random Forest')
+print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
+print(f'F1 with micro avg: {round(f1_score(y_test,pred, average="micro"),3)}')
+print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
+print('================================================================================================')
 
 
 """
@@ -337,6 +372,8 @@ Random Forest
 Multi Layered Perceptron
 ====================
 """
+print('================================================================================================')
+
 from sklearn.neural_network import MLPClassifier
 mlp = MLPClassifier(verbose=True,activation='identity',shuffle=True)
 mlp.fit(X_train,y_train)
@@ -348,7 +385,7 @@ print(f'F1 with micro avg: {round(f1_score(y_test,pred, average="micro"),3)}')
 print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
 
 param_grid = {'activation':['identity', 'logistic', 'tanh', 'relu'],'solver':['lbfgs', 'sgd', 'adam']}
-MLP_GRID = GridSearchCV(MLPClassifier(max_iter=700),param_grid,verbose=1,
+MLP_GRID = GridSearchCV(MLPClassifier(),param_grid,verbose=1,
                       n_jobs=n_jobs,scoring='accuracy',cv=tscv)
 
 MLP_GRID.fit(X,y.ravel())
