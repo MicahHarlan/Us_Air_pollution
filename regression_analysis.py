@@ -77,7 +77,6 @@ axs[0].set_xlabel('N Observations')
 axs[0].set_ylabel('Actual Value')
 axs[0].set_title(f'Backwards Stepwise: Actual vs. Predicted Value RMSE: {round(mean_squared_error(actual,predictions_rev,squared=False),2)}')
 
-
 test_predictions = model.predict(X_train)
 test = y_std.inverse_transform(test_predictions.to_numpy().reshape(len(test_predictions),1))
 actual2 = y_std.inverse_transform(y_train.reshape(len(y_train),1))
@@ -88,7 +87,6 @@ axs[1].set_ylabel('Actual Value')
 axs[1].set_title(f'Backwards Stepwise: Actual vs. Predicted Value RMSE: {round(mean_squared_error(actual2,test,squared=False),2)}')
 fig.tight_layout()
 fig.show()
-
 
 """
 =========================================================
@@ -142,7 +140,6 @@ plt.title(f'Random Forest: Actual vs. Predicted Value RMSE: {round(mean_squared_
 plt.legend()
 plt.show()
 
-
 """
 ==========================
 Dropping Stepwise Features
@@ -159,8 +156,6 @@ stepwise Regression With selected
 Features
 ===========================
 """
-
-
 
 """
 ============================
