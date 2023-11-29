@@ -4,11 +4,10 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 "DELETE"
-from sklearnex import patch_sklearn
-patch_sklearn()
+#from sklearnex import patch_sklearn
+#patch_sklearn()
 from sklearn.naive_bayes import GaussianNB
 from sklearn.naive_bayes import CategoricalNB
-
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler,LabelEncoder
 from sklearn.model_selection import train_test_split,TimeSeriesSplit,GridSearchCV
@@ -22,15 +21,18 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
 
 
-
-
 import warnings
 warnings.filterwarnings("ignore")
 n_jobs = -1
 shuffle = False
-tscv = TimeSeriesSplit(n_splits=5)
+tscv = TimeSeriesSplit(n_splits=12)
 df = (pd.read_csv('classification.csv'))
+df['classification'] = np.select([df['Y'].between(0,50),
+                                 df['Y'].between(51,300)]
+                                ,['Healthy','Unhealthy'])
+
 y = df['classification']
+
 features_list = ['Year','CO Mean', 'SO2 Mean', 'NO2 Mean', 'NO2 1st Max Hour', 'AQI',
        'O3_AQI_label','days_since_start']
 df.drop(columns=[col for col in df.keys() if col not in features_list],inplace=True)
@@ -83,11 +85,10 @@ Data Imbalance Used ADASYN
 =========================|
 """
 
-"""
-sns.countplot(x=y,data=y)
+sns.countplot(x=y)
 plt.title('Countplot of Target')
 plt.tight_layout()
-plt.show()"""
+plt.show()
 
 from imblearn.over_sampling import ADASYN,SMOTE
 oversample = ADASYN(sampling_strategy='auto',n_jobs=n_jobs)#n_neighbors=5
@@ -96,8 +97,6 @@ X['y_class'] = y
 
 X['Year'] = year_std.inverse_transform(X['Year'].to_numpy().reshape(len(X['CO Mean']),-1))
 X['days_since_start'] = days_start_std.inverse_transform(X['days_since_start'].to_numpy().reshape(len(X['CO Mean']),-1))
-
-
 
 X.sort_values(['days_since_start','Year'],axis=0,inplace=True)
 y = X['y_class']
@@ -119,22 +118,23 @@ Logistic Regression
 print('================================================================================================')
 
 print('Logistic Regression')
-lg = LogisticRegression()
+lg = LogisticRegression(fit_intercept=True)
 lg.fit(X_train,y_train)
 pred = lg.predict(X_test)
 print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
-print(f'F1 with micro avg: {round(f1_score(y_test,pred, average="micro"),3)}')
+print(f'F1 with micro avg: {round(f1_score(y_test,pred),3)}')
 print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
 
 param_grid = {'penalty':['l1', 'l2','elasticnet', None],
 'solver':['lbfgs', 'newton-cg', 'newton-cholesky', 'sag', 'saga']}
 
+"""
 lg_grid = GridSearchCV(LogisticRegression(n_jobs=n_jobs,max_iter=100000),
                        cv=tscv,param_grid=param_grid,n_jobs=n_jobs,verbose=1)
-"""
+
 lg_grid.fit(X,y)
 lg_grid_result = lg_grid.best_params_
-print(lg_grid_result)
+#print(lg_grid_result)
 print(lg_grid.best_score_)
 
 lg = LogisticRegression(n_jobs=n_jobs,
@@ -171,7 +171,8 @@ print('=========================================================================
 Decision Tree
 ====================
 """
-"""print('================================================================================================')
+
+print('================================================================================================')
 dt = DecisionTreeClassifier()
 dt.fit(X_train,y_train)
 pred = dt.predict(X_test)
@@ -180,6 +181,9 @@ print('DECISION TREE')
 print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
 print(f'F1 with micro avg: {round(f1_score(y_test,pred, average="micro"),3)}')
 print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
+
+
+"""
 param_grid = {'criterion':['gini', 'entropy','log_loss'],
               'splitter':['best', 'random'],
               'max_features':['auto', 'sqrt', 'log2'],
@@ -190,7 +194,7 @@ param_grid = {'criterion':['gini', 'entropy','log_loss'],
 
 dt_grid = GridSearchCV(DecisionTreeClassifier(),
                        cv=tscv,param_grid=param_grid,n_jobs=n_jobs,verbose=1)
-#
+                       
 dt_grid.fit(X,y.ravel())
 dt_grid_result = dt_grid.best_params_
 print(dt_grid.best_params_)
@@ -268,10 +272,11 @@ print('=========================================================================
 SVM
 ====================
 """
+
+"""
 print('================================================================================================')
 print('SVM')
-"""
-svm = SVC(verbose=3)
+svm = SVC(verbose=0)
 svm.fit(X_train,y_train)
 pred = svm.predict(X_test)
 print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
@@ -279,19 +284,16 @@ print(f'F1 with micro avg: {round(f1_score(y_test,pred, average="micro"),3)}')
 print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
 ACCURACY: 0.517
 F1 with micro avg: 0.517
-F1 with macro avg: 0.519"""
+F1 with macro avg: 0.519
 
-
-
-"""param_grid = {'kernel':["linear", "poly", "rbf", "sigmoid"]}
+param_grid = {'kernel':["linear", "poly", "rbf", "sigmoid"]}
 SVM_GRID = GridSearchCV(SVC(),param_grid,verbose=0,
                       n_jobs=n_jobs,scoring='accuracy',cv=tscv)
 SVM_GRID.fit(X,y.ravel())
 svm_best = SVM_GRID.best_params_
-print(svm_best)"""
+print(svm_best)
 
-
-"""svm = SVC(kernel='linear',decision_function_shape='ovr')
+svm = SVC(kernel='linear',decision_function_shape='ovr')
 svm.fit(X_train,y_train)
 pred = svm.predict(X_test)
 print('========================')
@@ -328,6 +330,8 @@ print('=========================================================================
 Random Forest
 ====================
 """
+
+
 print('================================================================================================')
 rf = RandomForestClassifier()
 rf.fit(X_train,y_train)
@@ -337,6 +341,8 @@ print('Random Forest')
 print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
 print(f'F1 with micro avg: {round(f1_score(y_test,pred, average="micro"),3)}')
 print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
+"""
+
 param_grid = {'criterion':['gini', 'entropy','log_loss'],
               'max_features':['auto', 'sqrt', 'log2'],
               'min_weight_fraction_leaf':range,
@@ -365,7 +371,7 @@ print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
 print(f'F1 with micro avg: {round(f1_score(y_test,pred, average="micro"),3)}')
 print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
 print('================================================================================================')
-
+"""
 
 """
 ====================
@@ -384,6 +390,7 @@ print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
 print(f'F1 with micro avg: {round(f1_score(y_test,pred, average="micro"),3)}')
 print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
 
+"""
 param_grid = {'activation':['identity', 'logistic', 'tanh', 'relu'],'solver':['lbfgs', 'sgd', 'adam']}
 MLP_GRID = GridSearchCV(MLPClassifier(),param_grid,verbose=1,
                       n_jobs=n_jobs,scoring='accuracy',cv=tscv)
@@ -401,3 +408,4 @@ print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
 print(f'F1 with micro avg: {round(f1_score(y_test,pred, average="micro"),3)}')
 print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
 print('================================================================================================')
+"""

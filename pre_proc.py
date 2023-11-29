@@ -110,10 +110,9 @@ Highest AQI Value is the actual AQI value.
 "New Feature Name: Chosen AQI"
 "AQI value is chosen from the max AQI value of the 3."
 df['AQI'] = df[['O3 AQI','CO AQI','SO2 AQI','NO2 AQI']].max(axis=1)
-df = df[(df['AQI'] > 20)]
+#df = df[(df['AQI'] > 20)]
 df['Y'] = df['AQI'].shift(-1)
 df.drop(df.tail(1).index,inplace=True)
-
 
 """
 ======================
@@ -165,11 +164,7 @@ shuffle = False
 df = df[(df['Date'] >= '2017-01-01')]
 df['days_since_start'] = (df['Date'] - pd.to_datetime('2017-01-01')).dt.days
 df.reset_index(inplace=True,drop=True)
-
 #df.to_csv('classification.csv',index=False)
-
-
-
 print(len(df))
 """
 ========================
@@ -267,8 +262,6 @@ X.drop(columns=['Y','County','City'],inplace=True,axis=1)
 X = pd.get_dummies(X,drop_first=True,dtype='int')
 X = sm.add_constant(X)
 copy_of_x = X.copy()
-
-
 print(X.keys())
 
 """
@@ -276,55 +269,10 @@ print(X.keys())
 Dropping low variance features
 ==========
 """
-
-
-
-"""
-Restandardizing
-"""
-co = StandardScaler()
-co.fit(X['CO AQI'].to_numpy().reshape(len(X['CO AQI']),-1))
-X['CO AQI'] =co.fit_transform(X['CO AQI'].to_numpy().reshape(len(X['CO AQI']),-1))
-so2 = StandardScaler()
-so2.fit(X['SO2 AQI'].to_numpy().reshape(len(X['SO2 AQI']),-1))
-X['SO2 AQI'] = so2.fit_transform(X['SO2 AQI'].to_numpy().reshape(len(X['SO2 AQI']),-1))
-o3 = StandardScaler()
-o3.fit(X['O3 AQI'].to_numpy().reshape(len(X['O3 AQI']),-1))
-X['O3 AQI'] = o3.fit_transform(X['O3 AQI'].to_numpy().reshape(len(X['O3 AQI']),-1))
-no2 = StandardScaler()
-no2.fit(X['NO2 AQI'].to_numpy().reshape(len(X['NO2 AQI']),-1))
-X['NO2 AQI'] = no2.fit_transform(X['NO2 AQI'].to_numpy().reshape(len(X['NO2 AQI']),-1))
-
-
-
-print(X.keys())
-
-"""
-===============
-Checking Resampling
-===============
-"""
-"""#print(std.inverse_transform(y.to_numpy().reshape(len(y),1))[0])
-#print(std3.inverse_transform(X['AQI'].to_numpy().reshape(len(X),1))[1])
-#print(std1.inverse_transform(X['days_since_start'].to_numpy().reshape(len(X),1)))
-
-print(f'LEN X: {len(X)}')
-print(f'LEN Y: {len(y)}')
-sns.countplot(x=y_class,data=df)
-plt.title('Countplot of Target')
-plt.tight_layout()
-plt.show()
-"""
-
-
-"""
-Low Variance Droppings
-"""
 X.drop(low_variance, inplace=True,axis=1)
 copy_of_x = X.copy()
 
 #%%
-
 """
 ===============
 VIF Analysis
@@ -341,14 +289,11 @@ while not under_ten:
     if vif_data['VIF'].max() <= 10:
         under_ten = True
         break
-
     t = vif_data.loc[vif_data['VIF'] == vif_data['VIF'].max()]
-
     X.drop(t['feature'].item(),inplace=True,axis=1)
     removed.append(t['feature'].item())
 removed.append('CO_AQI_label')
 X.drop('CO_AQI_label',inplace=True,axis=1)
-
 vif_data1 = pd.DataFrame()
 vif_data1['feature'] = X.columns
 vif_data1['VIF'] = [variance_inflation_factor(X.values,i) for i in range(len(X.columns))]
@@ -356,24 +301,20 @@ print(vif_data1)
 print(f'FEATURES REMOVED WITH MULTICOLINEARITY: {len(removed)}')
 print(f'REMOVED: {removed}')
 X = sm.add_constant(X)
-#print(X.columns)
 copy_of_x = X.copy()
 vif_dropped = removed
-
 
 """
 ======================
 Random Forest Analysis
 ======================
 """
-#X = copy_of_x.copy()
 rf = RandomForestRegressor(max_depth=10,n_jobs=n_jobs)
 X_train,X_test,y_train,y_test = train_test_split(X,y,test_size=.2 ,shuffle=shuffle)
 rf.fit(X_train,y_train)
 importances = rf.feature_importances_
 features = X.columns
 indices = np.argsort(importances)
-
 
 """
 =====================================
@@ -394,8 +335,8 @@ print(f'\n')
 print(f'RF ANALYSIS FEATURES DROPPED: {dropped}')
 
 X_train,X_test,y_train,y_test = train_test_split(X,y,test_size=.2 ,shuffle=shuffle)
-rf.fit(X_train,y_train)
 
+rf.fit(X_train,y_train)
 rand_kept = X.columns
 importances = rf.feature_importances_
 features = X.columns
@@ -407,9 +348,7 @@ plt.xlabel('Relative Importance.')
 plt.tight_layout()
 plt.show()
 
-
-
-predictions = rf.predict(X_test)
+"""predictions = rf.predict(X_test)
 predictions_rev = std.inverse_transform(predictions.reshape(len(X_test),1))
 actual = std.inverse_transform(y_test.to_numpy().reshape(len(X_test),1))
 point1 = actual.min()
@@ -421,21 +360,20 @@ plt.xlabel('N Observations')
 plt.ylabel('Actual Value')
 plt.title(f'Random Forest: Actual vs. Predicted Value RMSE: {round(mean_squared_error(actual,predictions_rev,squared=False),2)}')
 plt.legend()
-plt.show()
-
+plt.show()"""
 
 """
 ============================
 PRINCIPAL COMPONENT ANALYSIS
 ============================
 """
-
-
+"""
+MAKE SURE TO PLOT 90% of explained variance line
+"""
 X = copy_of_x.copy()
 pca = PCA(svd_solver='arpack')
 pca.fit(X)
 X_pca = pca.transform(X)
-
 print(f'Explained Variance Ratio {pca.explained_variance_ratio_}')
 s = 0
 a = 0
@@ -461,18 +399,11 @@ plt.show()
 print(f'RF DROPPED: {dropped}')
 print(f'LOW VARIANCE DROPPED: {low_variance}')
 print(f'VIF DROPPED: {vif_dropped}')
-
-
-
 dropped_features = list(set(dropped).intersection(low_variance))
 
-
 kept_features = ['AQI','days_since_start','O3_AQI_label','NO2 Mean']
-
 X = copy_of_x.copy()
 X.drop(columns=[col for col in X.keys() if col not in rand_kept],inplace=True)
-#X.drop(columns='O3 Mean',inplace=True)
-
 print(X.columns)
 
 """
@@ -480,18 +411,14 @@ print(X.columns)
 Selected Features Pearson Correrlation
 ========================================
 """
-
 temp = X.copy()
 temp.drop(['O3_AQI_label'],inplace=True,axis=1)
-
-
 features = temp.keys()
 pearson_corr = df[features]
-
 plt.figure(figsize=(6,6))
 correlation_matrix = pearson_corr.corr(method='pearson')
 sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=".2f")
-plt.title('Selected Features Pearson Correlation Coefficients Heatmap Matrix Heatmap')
+plt.title('Pearson Correlation Coefficients Heatmap Matrix Heatmap')
 plt.tight_layout()
 plt.show()
 
@@ -502,13 +429,11 @@ Selected Features Covariance Matrix
 """
 plt.figure(figsize=(6,6))
 sns.heatmap(temp.cov(), annot=True, cmap='coolwarm', fmt=".2f")
-plt.title('Selected Features Covariance Matrix Heatmap')
+plt.title('Covariance Matrix Heatmap')
 plt.tight_layout()
 plt.show()
-
 X = df[X.keys()]
 print(f' {X.keys()}')
 print(X)
-
 X['Y'] = df['Y']
 #X.to_csv('cleaned_aqi.csv',index=False)
