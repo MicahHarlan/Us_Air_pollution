@@ -4,8 +4,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn import metrics
 "DELETE"
-#from sklearnex import patch_sklearn
-#patch_sklearn()
+from sklearnex import patch_sklearn
+patch_sklearn()
+
 from sklearn.naive_bayes import GaussianNB
 from sklearn.naive_bayes import CategoricalNB
 from sklearn.pipeline import make_pipeline

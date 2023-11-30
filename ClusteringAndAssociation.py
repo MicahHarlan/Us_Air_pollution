@@ -2,7 +2,13 @@ import pandas as pd
 import numpy as np
 from mlxtend.preprocessing import TransactionEncoder
 from mlxtend.frequent_patterns import apriori, association_rules
+from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
+
+
+"DELETE"
+#from sklearnex import patch_sklearn
+#patch_sklearn()
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import StandardScaler,LabelEncoder,Normalizer,normalize
@@ -99,19 +105,34 @@ no2 = StandardScaler()
 no2.fit(X['NO2 AQI'].to_numpy().reshape(len(X['NO2 AQI']),-1))
 X['NO2 AQI'] = no2.fit_transform(X['NO2 AQI'].to_numpy().reshape(len(X['NO2 AQI']),-1))
 
+copy = X.copy()
 X2 = X.copy()
+X3 = X.copy()
+print(len(X.keys()))
+
+
+pca = PCA()
+principalComponents = pca.fit_transform(X)
+PCA_components = pd.DataFrame(principalComponents)
+features = range(pca.n_components_)
+plt.bar(features, pca.explained_variance_ratio_, color='black')
+plt.xlabel('PCA features')
+plt.ylabel('variance %')
+plt.xticks(features)
+plt.show()
 
 """
 ========================================================
 Elbow Method Within cluster Sum of Squared Errors (WSS)
 ========================================================
 """
+
 sse = {}
 for k in range(1, 30):
-    kmeans = KMeans(n_clusters=k, max_iter=1000).fit(X)
-    X["clusters"] = kmeans.labels_
+    kmeans = KMeans(n_clusters=k).fit(PCA_components.iloc[:,:2])
+    #X["clusters"] = kmeans.labels_
     #print(data["clusters"])
-    sse[k] = kmeans.inertia_ # Inertia: Sum of distances of samples to their closest cluster center
+    sse[k] = kmeans.inertia_
 plt.figure()
 plt.plot(list(sse.keys()), list(sse.values()))
 plt.xlabel("Number of cluster")
@@ -119,26 +140,46 @@ plt.ylabel("SSE")
 plt.tight_layout()
 plt.show()
 
-
 """
 ========================================================
 Silhouette Method for selection of K
 ========================================================
 """
 
-sil = []
-kmax = 100
+'''sil = []
+kmax = 20
 
 for k in range(2, kmax+1):
     kmeans = KMeans(n_clusters=k)
-    kmeans.fit(X2)
+    kmeans.fit(PCA_components.iloc[:,:2])
     labels = kmeans.labels_
-    sil.append(silhouette_score(X2, labels, metric='euclidean'))
-plt.figure(figsize=(16,16))
+    sil.append(silhouette_score(PCA_components.iloc[:,:2], labels, metric='euclidean'))
+plt.figure()
 plt.plot(np.arange(2, k + 1, 1), sil, 'bx-')
-plt.xticks(np.arange(2,k+1,1))
+plt.xticks(np.arange(2,k+1,2))
 plt.grid()
 plt.xlabel('k')
 plt.ylabel('Silhouette score')
 plt.title('Silhouette Method')
+plt.tight_layout()
+plt.show()'''
+
+
+
+
+k = 6
+X = copy.copy()
+pca = PCA(n_components=2)
+X = pca.fit_transform(X)
+kmeans = KMeans(n_clusters=k)
+y_km = kmeans.fit_predict(X)
+
+for i in range(k):
+    plt.scatter(X[y_km == i,0],X[y_km == i,1],label=f'Cluster {i+1}',s=10)
+
+plt.scatter(kmeans.cluster_centers_[:,0],kmeans.cluster_centers_[:,1],marker='*')
+plt.legend()
+plt.grid()
+plt.title(f'{k} Kmeans-Clusters')
+plt.tight_layout()
 plt.show()
