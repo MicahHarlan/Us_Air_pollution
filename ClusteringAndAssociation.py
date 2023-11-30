@@ -186,7 +186,23 @@ plt.show()
 Rule Mining
 =====================
 """
-
+data = list(df["products"].apply(lambda x:x.split(",") ))
+print(data)
+a = TransactionEncoder()
+a_data = a.fit(data).transform(data)
+df = pd.DataFrame(a_data,columns=a.columns_)
+print(df)
+change = {False:0, True:1}
+df = df.replace(change)
+print(df)
+# ===============================
+# Applying Apriori and Resulting
+# ==============================
+df = apriori(df,min_support=0.2, use_colnames=True, verbose=1)
+print(df)
+df_ar = association_rules(df,metric='confidence', min_threshold=0.6)
+df_ar = df_ar.sort_values(['confidence','lift'], ascending=[False, False])
+print(df_ar.head())
 
 
 
