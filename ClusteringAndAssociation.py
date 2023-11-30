@@ -43,28 +43,76 @@ for s in removed_states:
 "PPB = Parts Per Billion"
 units = {'O3':'PPM','NO2':'PPB','S02':'PPB','CO2':'PPM'}
 
+
 df = df.dropna()
 df.drop_duplicates(inplace=True)
 df['Date'] = pd.to_datetime(df['Date'])
 df['Month'] = df['Date'].dt.month
 df['Year'] = df['Date'].dt.year
 df['Day'] = df['Date'].dt.day
+print(df)
+
+"""
+======================
+Adding Seasons
+======================
+"""
+df['Season'] = np.select([df['Month'].between(3,5),
+                        df['Month'].between(6,8),
+                        df['Month'].between(9,11),
+                        df['Month'] == 12,
+                        df['Month'].between(1,2)],
+                         ['Spring','Summer','Fall','Winter','Winter']
+                         )
+
+
+df['NO2_AQI_label'] = np.select([df['NO2 AQI'].between(0,50),
+                                 df['NO2 AQI'].between(51,100),
+                                 df['NO2 AQI'].between(101,150),
+                                 df['NO2 AQI'].between(151,200),
+                                 df['NO2 AQI'].between(201,300)]
+                                ,air_qual)
+
+df['O3_AQI_label'] = np.select([df['O3 AQI'].between(0,50),
+                                 df['O3 AQI'].between(51,100),
+                                 df['O3 AQI'].between(101,150),
+                                 df['O3 AQI'].between(151,200),
+                                 df['O3 AQI'].between(201,300)]
+                                ,air_qual)
+
+df['CO_AQI_label'] = np.select([df['CO AQI'].between(0,50),
+                                 df['CO AQI'].between(51,100),
+                                 df['CO AQI'].between(101,150),
+                                 df['CO AQI'].between(151,200),
+                                 df['CO AQI'].between(201,300)]
+                                ,air_qual)
+
+df['SO2_AQI_label'] = np.select([df['SO2 AQI'].between(0,50),
+                                 df['SO2 AQI'].between(51,100),
+                                 df['SO2 AQI'].between(101,150),
+                                 df['SO2 AQI'].between(151,200),
+                                 df['SO2 AQI'].between(201,300)]
+                                ,air_qual)
+
 
 #%%
 """
 Setting Date
 """
 shuffle = False
-df = df[(df['Date'] >= '2017-01-01')]
-df['days_since_start'] = (df['Date'] - pd.to_datetime('2017-01-01')).dt.days
+#df = df[(df['Date'] >= '2015-01-01')]
+df['days_since_start'] = (df['Date'] - pd.to_datetime('2000-01-01')).dt.days
 df.reset_index(inplace=True,drop=True)
+
+print(len(df))
+
 
 """
 =====
 Data Transformation
 =====
 """
-X = df.drop(columns=['Address','Date','State','County','City'],axis=1)
+X = df.drop(columns=['Address','Date'])
 
 norm = Normalizer()
 norm.fit(X['Month'].to_numpy().reshape(len(X['Month']),-1))
@@ -83,11 +131,11 @@ numerical = ['O3 1st Max Hour',
              'O3 Mean', 'O3 1st Max Value', 'CO Mean','CO 1st Max Value', 'SO2 Mean',
              'SO2 1st Max Value','days_since_start']
 
+
 std1 = StandardScaler()
 for s in numerical:
     std1.fit(X[s].to_numpy().reshape(len(X[s]),-1))
     X[s] = std1.fit_transform(X[s].to_numpy().reshape(len(X[s]),-1))
-std = StandardScaler()
 
 co = StandardScaler()
 co.fit(X['CO AQI'].to_numpy().reshape(len(X['CO AQI']),-1))
@@ -105,11 +153,22 @@ no2 = StandardScaler()
 no2.fit(X['NO2 AQI'].to_numpy().reshape(len(X['NO2 AQI']),-1))
 X['NO2 AQI'] = no2.fit_transform(X['NO2 AQI'].to_numpy().reshape(len(X['NO2 AQI']),-1))
 
+apriori_labels = ['NO2_AQI_label',
+                  'O3_AQI_label', 'CO_AQI_label','State','Season','SO2_AQI_label']
+apriori_x = X[apriori_labels]
+
+X.drop(columns =apriori_labels,inplace=True,axis=1)
+X.drop(columns=['County','City'],inplace=True,axis=1)
+copy_of_x = X.copy()
+print(X.keys())
+
+print(apriori_x)
+
+
 copy = X.copy()
 X2 = X.copy()
 X3 = X.copy()
 print(len(X.keys()))
-
 
 pca = PCA()
 principalComponents = pca.fit_transform(X)
@@ -121,12 +180,23 @@ plt.ylabel('variance %')
 plt.xticks(features)
 plt.show()
 
+
+"""
+=====================
+Rule Mining
+=====================
+"""
+
+
+
+
 """
 ========================================================
 Elbow Method Within cluster Sum of Squared Errors (WSS)
 ========================================================
 """
 
+'''
 sse = {}
 for k in range(1, 30):
     kmeans = KMeans(n_clusters=k).fit(PCA_components.iloc[:,:2])
@@ -146,7 +216,7 @@ Silhouette Method for selection of K
 ========================================================
 """
 
-'''sil = []
+sil = []
 kmax = 20
 
 for k in range(2, kmax+1):
@@ -162,10 +232,7 @@ plt.xlabel('k')
 plt.ylabel('Silhouette score')
 plt.title('Silhouette Method')
 plt.tight_layout()
-plt.show()'''
-
-
-
+plt.show()
 
 k = 6
 X = copy.copy()
@@ -183,3 +250,4 @@ plt.grid()
 plt.title(f'{k} Kmeans-Clusters')
 plt.tight_layout()
 plt.show()
+'''
