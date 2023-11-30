@@ -39,6 +39,7 @@ removed_states = ['Alabama','Alabama', 'Arizona', 'Arkansas', 'California', 'Col
 for s in removed_states:
     df = df[(df['State'] != s)]
 
+
 "PPM = Parts Per Million"
 "PPB = Parts Per Billion"
 units = {'O3':'PPM','NO2':'PPB','S02':'PPB','CO2':'PPM'}
@@ -65,7 +66,7 @@ df['Season'] = np.select([df['Month'].between(3,5),
                          ['Spring','Summer','Fall','Winter','Winter']
                          )
 
-
+air_qual = ['NO2_Good','NO2_Moderate','NO2_Unhealthy for SG','NO2_Unhealthy','NO2_Very Unhealthy']
 df['NO2_AQI_label'] = np.select([df['NO2 AQI'].between(0,50),
                                  df['NO2 AQI'].between(51,100),
                                  df['NO2 AQI'].between(101,150),
@@ -73,6 +74,7 @@ df['NO2_AQI_label'] = np.select([df['NO2 AQI'].between(0,50),
                                  df['NO2 AQI'].between(201,300)]
                                 ,air_qual)
 
+air_qual = ['O3_Good','O3_Moderate','O3_Unhealthy for SG','O3_Unhealthy','O3_Very_Unhealthy']
 df['O3_AQI_label'] = np.select([df['O3 AQI'].between(0,50),
                                  df['O3 AQI'].between(51,100),
                                  df['O3 AQI'].between(101,150),
@@ -80,12 +82,15 @@ df['O3_AQI_label'] = np.select([df['O3 AQI'].between(0,50),
                                  df['O3 AQI'].between(201,300)]
                                 ,air_qual)
 
+air_qual = ['CO_Good','CO_Moderate','CO_Unhealthy for SG','CO_Unhealthy','CO_Very Unhealthy']
 df['CO_AQI_label'] = np.select([df['CO AQI'].between(0,50),
                                  df['CO AQI'].between(51,100),
                                  df['CO AQI'].between(101,150),
                                  df['CO AQI'].between(151,200),
                                  df['CO AQI'].between(201,300)]
                                 ,air_qual)
+
+air_qual = ['SO2_Good','SO2_Moderate','SO2_Unhealthy for SG','SO2_Unhealthy','SO2_Very Unhealthy']
 
 df['SO2_AQI_label'] = np.select([df['SO2 AQI'].between(0,50),
                                  df['SO2 AQI'].between(51,100),
@@ -100,8 +105,8 @@ df['SO2_AQI_label'] = np.select([df['SO2 AQI'].between(0,50),
 Setting Date
 """
 shuffle = False
-#df = df[(df['Date'] >= '2015-01-01')]
-df['days_since_start'] = (df['Date'] - pd.to_datetime('2000-01-01')).dt.days
+df = df[(df['Date'] >= '2015-01-01')]
+df['days_since_start'] = (df['Date'] - pd.to_datetime('2015-01-01')).dt.days
 df.reset_index(inplace=True,drop=True)
 
 print(len(df))
@@ -162,7 +167,6 @@ X.drop(columns=['County','City'],inplace=True,axis=1)
 copy_of_x = X.copy()
 print(X.keys())
 
-print(apriori_x)
 
 
 copy = X.copy()
@@ -186,25 +190,19 @@ plt.show()
 Rule Mining
 =====================
 """
-data = list(df["products"].apply(lambda x:x.split(",") ))
-print(data)
+data = apriori_x.values.tolist()
 a = TransactionEncoder()
 a_data = a.fit(data).transform(data)
 df = pd.DataFrame(a_data,columns=a.columns_)
-print(df)
 change = {False:0, True:1}
 df = df.replace(change)
-print(df)
 # ===============================
 # Applying Apriori and Resulting
 # ==============================
-df = apriori(df,min_support=0.2, use_colnames=True, verbose=1)
-print(df)
-df_ar = association_rules(df,metric='confidence', min_threshold=0.6)
+df = apriori(df,min_support=0.5, use_colnames=True, verbose=1)
+df_ar = association_rules(df,metric='confidence', min_threshold=0.8)
 df_ar = df_ar.sort_values(['confidence','lift'], ascending=[False, False])
-print(df_ar.head())
-
-
+print(df_ar.to_string())
 
 """
 ========================================================
@@ -212,7 +210,6 @@ Elbow Method Within cluster Sum of Squared Errors (WSS)
 ========================================================
 """
 
-'''
 sse = {}
 for k in range(1, 30):
     kmeans = KMeans(n_clusters=k).fit(PCA_components.iloc[:,:2])
@@ -231,10 +228,8 @@ plt.show()
 Silhouette Method for selection of K
 ========================================================
 """
-
-sil = []
+'''sil = []
 kmax = 20
-
 for k in range(2, kmax+1):
     kmeans = KMeans(n_clusters=k)
     kmeans.fit(PCA_components.iloc[:,:2])
@@ -249,7 +244,7 @@ plt.ylabel('Silhouette score')
 plt.title('Silhouette Method')
 plt.tight_layout()
 plt.show()
-
+'''
 k = 6
 X = copy.copy()
 pca = PCA(n_components=2)
@@ -266,4 +261,3 @@ plt.grid()
 plt.title(f'{k} Kmeans-Clusters')
 plt.tight_layout()
 plt.show()
-'''
