@@ -468,8 +468,9 @@ rf_grid = RandomForestClassifier(max_depth=10,
                         criterion=rf_grid_result['criterion'],
                         max_features=rf_grid_result['max_features'],
     min_weight_fraction_leaf=rf_grid_result['min_weight_fraction_leaf'],
-    min_samples_leaf=rf_grid_result['min_samples_leaf'],min_impurity_decrease=rf_grid_result['min_impurity_decrease'],
-ccp_alpha=rf_grid_result['ccp_alpha'],min_samples_split=rf_grid_result['min_samples_split'])
+    min_samples_leaf=rf_grid_result['min_samples_leaf'],min_impurity_decrease=rf_grid_result['min_impurity_decrease'],min_samples_split=rf_grid_result['min_samples_split'])
+
+#Removed CCp alpha
 
 rf_grid.fit(X_train,y_train)
 pred = rf_grid.predict(X_test)
@@ -498,7 +499,7 @@ Bagging Random Forest
 """
 print('================================================================================================')
 bc = BaggingClassifier(RandomForestClassifier(n_estimators=10),n_jobs=n_jobs)
-bc.fit(X_train,y_train)
+bc.fit(X,y)
 pred = bc.predict(X_test)
 
 print('Bagging Random Forest')
