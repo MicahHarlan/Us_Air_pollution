@@ -3,9 +3,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn import metrics
-"DELETE"
+
+'''"DELETE"
 from sklearnex import patch_sklearn
-patch_sklearn()
+patch_sklearn()'''
+
 from sklearn.neural_network import MLPClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.naive_bayes import CategoricalNB
@@ -439,24 +441,22 @@ print(f'F1: {round(f1_score(y_test,pred),3)}')
 print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
 
 """
-================
+===================
 Confusion Matrix rf
-================
+===================
 """
 matrix = confusion_matrix(y_test, pred)
 disp = ConfusionMatrixDisplay(confusion_matrix=matrix,display_labels=rf.classes_)
 disp.plot()
-plt.title('Bagging Classifier Confusion Matrix')
+plt.title('Random Forest Confusion Matrix')
 plt.show()
-
-
 
 param_grid = {'criterion':['gini', 'entropy','log_loss'],
               'max_features':['auto', 'sqrt', 'log2'],
               'min_weight_fraction_leaf':range,
               'min_samples_leaf':np.arange(0,5,1),
               'min_impurity_decrease':range,
-              'ccp_alpha':range,'min_samples_split':np.arange(2,3,1)}
+              'min_samples_split':np.arange(2,3,1)}
 
 rf_grid = GridSearchCV(RandomForestClassifier(n_jobs=n_jobs,max_depth=10),
                        cv=tscv,param_grid=param_grid,n_jobs=n_jobs,verbose=1)
@@ -469,12 +469,12 @@ rf_grid = RandomForestClassifier(max_depth=10,
                         max_features=rf_grid_result['max_features'],
     min_weight_fraction_leaf=rf_grid_result['min_weight_fraction_leaf'],
     min_samples_leaf=rf_grid_result['min_samples_leaf'],min_impurity_decrease=rf_grid_result['min_impurity_decrease'],
-ccp_alpha=rf_grid_result['ccp_alpha'],min_samples_split=rf_grid_result['min_samples_split'])
+min_samples_split=rf_grid_result['min_samples_split'])
 
 rf_grid.fit(X_train,y_train)
 pred = rf_grid.predict(X_test)
 print('==================================')
-print('After Grid Search Random Forest')
+print('Grid Search Random Forest')
 print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
 print(f'F1: {round(f1_score(y_test,pred),3)}')
 print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
