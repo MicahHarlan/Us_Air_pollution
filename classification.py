@@ -15,7 +15,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler,LabelEncoder
 from sklearn.model_selection import train_test_split,TimeSeriesSplit,GridSearchCV
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score,f1_score,classification_report,ConfusionMatrixDisplay,confusion_matrix
+from sklearn.metrics import accuracy_score,f1_score,classification_report,ConfusionMatrixDisplay,confusion_matrix,recall_score,precision_score
 from sklearn.linear_model import LogisticRegression
 from prettytable import PrettyTable
 from sklearn.pipeline import make_pipeline
@@ -23,7 +23,7 @@ from sklearn.svm import SVC,LinearSVC
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import BaggingClassifier
-
+from imblearn.metrics import specificity_score
 import warnings
 warnings.filterwarnings("ignore")
 n_jobs = -1
@@ -125,8 +125,10 @@ lg.fit(X_train,y_train)
 pred = lg.predict(X_test)
 print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
 print(f'F1: {round(f1_score(y_test,pred),3)}')
-print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
-
+print(f'Precision: {round(precision_score(y_test,pred),3)}')
+print(f'Recall: {round(recall_score(y_test,pred),3)}')
+print(f'Specificity:{specificity_score(y_test,pred)}')
+print('================================================================================================')
 
 """
 =================|
@@ -141,52 +143,10 @@ plt.show()
 
 
 """
-param_grid = {'penalty':['l1', 'l2','elasticnet', None],
-'solver':['lbfgs', 'newton-cg', 'newton-cholesky', 'sag', 'saga']}
-
-lg_grid = GridSearchCV(LogisticRegression(n_jobs=n_jobs,max_iter=100000),
-                       cv=tscv,param_grid=param_grid,n_jobs=n_jobs,verbose=1)
-
-lg_grid.fit(X,y)
-lg_grid_result = lg_grid.best_params_
-#print(lg_grid_result)
-print(lg_grid.best_score_)
-
-lg = LogisticRegression(n_jobs=n_jobs,
-                        penalty=lg_grid_result['penalty'],
-                        dual=False,
-                        fit_intercept=True,solver=lg_grid_result['solver'],max_iter=100000)
-
-lg_grid2 = GridSearchCV(LogisticRegression(n_jobs=n_jobs,
-                        penalty=lg_grid_result['penalty'],
-                        dual=False,
-                        fit_intercept=True,solver=lg_grid_result['solver'],max_iter=100000),
-                        param_grid={'C':np.arange(1,10,.5),'tol':np.arange(.0001,.0020,.0001)}
-                        ,n_jobs=n_jobs,cv=tscv,verbose=1)
-
-lg_grid2.fit(X,y)
-lg_grid_result2 = lg_grid2.best_params_
-lg2 = LogisticRegression(n_jobs=n_jobs,
-                        penalty=lg_grid_result['penalty'],
-                        dual=False,
-                        fit_intercept=True,solver=lg_grid_result['solver'],max_iter=10000,C=lg_grid_result2['C'])
-
-print(lg_grid_result2)
-lg2.fit(X_train,y_train)
-print('========================')
-print('After Grid Search LogReg')
-print(f'ACCURACY: {round(accuracy_score(y_test,lg2.predict(X_test)),3)}')
-print(f'F1: {round(f1_score(y_test,lg2.predict(X_test)),3)}')
-print(f'F1 with macro avg: {round(f1_score(y_test,lg2.predict(X_test), average="macro"),3)}')
-print('================================================================================================')
-"""
-
-"""
 ====================
 Decision Tree
 ====================
 """
-
 print('================================================================================================')
 'Base'
 dt = DecisionTreeClassifier(max_depth=10)
@@ -196,7 +156,10 @@ range = [0.0,0.01,0.02,0.03]
 print('DECISION TREE')
 print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
 print(f'F1: {round(f1_score(y_test,pred),3)}')
-print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
+print(f'Precision: {round(precision_score(y_test,pred),3)}')
+print(f'Recall: {round(recall_score(y_test,pred),3)}')
+print(f'Specificity:{round(specificity_score(y_test,pred),3)}')
+print('================================================================================================')
 
 
 """
@@ -210,7 +173,7 @@ disp.plot()
 plt.title('Decision Tree Confusion Matrix')
 plt.show()
 
-'''
+
 param_grid = {'criterion':['gini', 'entropy','log_loss'],
               'splitter':['best', 'random'],
               'max_features':['auto', 'sqrt', 'log2'],
@@ -239,7 +202,9 @@ print('========================')
 print('Pre Pruned Grid Search Decision Tree')
 print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
 print(f'F1: {round(f1_score(y_test,pred),3)}')
-print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
+print(f'Precision: {round(precision_score(y_test,pred),3)}')
+print(f'Recall: {round(recall_score(y_test,pred),3)}')
+print(f'Specificity:{round(specificity_score(y_test,pred),3)}')
 print('================================================================================================')
 
 """
@@ -267,9 +232,9 @@ print('========================')
 print('Post Pruned Grid Search Decision Tree')
 print(f'ACCURACY: {round(accuracy_score(y_test, pred), 3)}')
 print(f'F1: {round(f1_score(y_test, pred), 3)}')
-print(f'F1 with macro avg: {round(f1_score(y_test, pred, average="macro"), 3)}')
-print('================================================================================================')
-print('================================================================================================')
+print(f'Precision: {round(precision_score(y_test,pred),3)}')
+print(f'Recall: {round(recall_score(y_test,pred),3)}')
+print(f'Specificity:{round(specificity_score(y_test,pred),3)}')
 print('================================================================================================')
 
 """
@@ -282,7 +247,7 @@ disp = ConfusionMatrixDisplay(confusion_matrix=matrix,display_labels=dt_post.cla
 disp.plot()
 plt.title('Post Pruned Decision Tree Confusion Matrix')
 plt.show()
-'''
+
 
 """
 ====================
@@ -296,7 +261,10 @@ pred = knn.predict(X_test)
 print('KNN')
 print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
 print(f'F1: {round(f1_score(y_test,pred),3)}')
-print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
+print(f'Precision: {round(precision_score(y_test,pred),3)}')
+print(f'Recall: {round(recall_score(y_test,pred),3)}')
+print(f'Specificity:{round(specificity_score(y_test,pred),3)}')
+print('================================================================================================')
 
 """
 ===================
@@ -311,7 +279,7 @@ plt.show()
 
 
 
-"""param_grid = {'weights':['uniform', 'distance'],
+param_grid = {'weights':['uniform', 'distance'],
               'algorithm':['ball_tree', 'kd_tree', 'brute']}
 KNN_GRID = GridSearchCV(KNeighborsClassifier(n_jobs=n_jobs),param_grid,verbose=1,
                       n_jobs=n_jobs,scoring='accuracy',cv=tscv)
@@ -335,25 +303,25 @@ KNN_GRID.fit(X,y.ravel())
 knn_best = KNN_GRID.best_params_
 print(knn_best)
 
-knn = KNeighborsClassifier(n_jobs=n_jobs,n_neighbors=knn_best['n_neighbors']
+knn_grid = KNeighborsClassifier(n_jobs=n_jobs,n_neighbors=knn_best['n_neighbors']
                            ,weights=knn_best2['weights'],algorithm=knn_best2['algorithm'],p=knn_best3['p'])
-knn.fit(X_train,y_train)
+knn_grid.fit(X_train,y_train)
 pred = knn.predict(X_test)
 
 print('========================')
 print('After Grid Search KNN')
 print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
 print(f'F1: {round(f1_score(y_test,pred),3)}')
-print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
+print(f'Precision: {round(precision_score(y_test,pred),3)}')
+print(f'Recall: {round(recall_score(y_test,pred),3)}')
+print(f'Specificity:{round(specificity_score(y_test,pred),3)}')
 print('================================================================================================')
-"""
+
 
 """
 ====================
 SVM
 ====================
-"""
-
 """
 print('================================================================================================')
 print('SVM')
@@ -362,21 +330,23 @@ svm.fit(X_train,y_train)
 pred = svm.predict(X_test)
 print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
 print(f'F1: {round(f1_score(y_test,pred),3)}')
-print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
+print(f'Precision: {round(precision_score(y_test,pred),3)}')
+print(f'Recall: {round(recall_score(y_test,pred),3)}')
+print(f'Specificity:{round(specificity_score(y_test,pred),3)}')
+print('================================================================================================')
 
 """
-#================
-#Confusion Matrix
-#================
+================
+Confusion Matrix
+================
 """
 matrix = confusion_matrix(y_test, pred)
 disp = ConfusionMatrixDisplay(confusion_matrix=matrix,display_labels=svm.classes_)
 disp.plot()
 plt.title('SVM Confusion Matrix')
 plt.show()
-"""
 
-"""
+
 param_grid = {'kernel':["linear", "poly", "rbf", "sigmoid"]}
 SVM_GRID = GridSearchCV(SVC(),param_grid,verbose=0,
                       n_jobs=n_jobs,scoring='accuracy',cv=tscv)
@@ -384,16 +354,30 @@ SVM_GRID.fit(X,y.ravel())
 svm_best = SVM_GRID.best_params_
 print(svm_best)
 
-svm = SVC(kernel='linear',decision_function_shape='ovr')
-svm.fit(X_train,y_train)
-pred = svm.predict(X_test)
+best_svm = SVC(kernel=svm_best['kernel'],probability=True)
+best_svm.fit(X_train,y_train)
+pred = best_svm.predict(X_test)
 print('========================')
 print('After Grid Search KNN')
 print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
 print(f'F1: {round(f1_score(y_test,pred),3)}')
-print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
+print(f'Precision: {round(precision_score(y_test,pred),3)}')
+print(f'Recall: {round(recall_score(y_test,pred),3)}')
+print(f'Specificity:{round(specificity_score(y_test,pred),3)}')
 print('================================================================================================')
+
 """
+================================
+Confusion Matrix SVM Grid Search
+================================
+"""
+matrix = confusion_matrix(y_test, pred)
+disp = ConfusionMatrixDisplay(confusion_matrix=matrix,display_labels=best_svm.classes_)
+disp.plot()
+plt.title('Grid-Searched SVM Confusion Matrix')
+plt.show()
+print('================================================================================================')
+
 print('================================================================================================')
 
 
@@ -418,10 +402,12 @@ disp = ConfusionMatrixDisplay(confusion_matrix=matrix,display_labels=nb.classes_
 disp.plot()
 plt.title('Naive Bayes Confusion Matrix')
 plt.show()
-print('========================')
+print('================================================')
 print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
-print(f'F1 with micro avg: {round(f1_score(y_test,pred),3)}')
-print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
+print(f'F1: {round(f1_score(y_test,pred),3)}')
+print(f'Precision: {round(precision_score(y_test,pred),3)}')
+print(f'Recall: {round(recall_score(y_test,pred),3)}')
+print(f'Specificity:{round(specificity_score(y_test,pred),3)}')
 print('================================================================================================')
 
 
@@ -432,13 +418,16 @@ Random Forest
 ====================
 """
 print('================================================================================================')
-rf = RandomForestClassifier()
+rf = RandomForestClassifier(n_jobs=n_jobs)
 rf.fit(X_train,y_train)
 pred = rf.predict(X_test)
 print('Random Forest')
 print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
 print(f'F1: {round(f1_score(y_test,pred),3)}')
-print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
+print(f'Precision: {round(precision_score(y_test,pred),3)}')
+print(f'Recall: {round(recall_score(y_test,pred),3)}')
+print(f'Specificity:{round(specificity_score(y_test,pred),3)}')
+print('================================================================================================')
 
 """
 ===================
@@ -460,7 +449,7 @@ param_grid = {'criterion':['gini', 'entropy','log_loss'],
 
 rf_grid = GridSearchCV(RandomForestClassifier(n_jobs=n_jobs,max_depth=10),
                        cv=tscv,param_grid=param_grid,n_jobs=n_jobs,verbose=1)
-
+range = [0.0,0.01,0.02]
 rf_grid.fit(X,y.ravel())
 rf_grid_result = rf_grid.best_params_
 print(rf_grid.best_params_)
@@ -477,7 +466,9 @@ print('==================================')
 print('Grid Search Random Forest')
 print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
 print(f'F1: {round(f1_score(y_test,pred),3)}')
-print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
+print(f'Precision: {round(precision_score(y_test,pred),3)}')
+print(f'Recall: {round(recall_score(y_test,pred),3)}')
+print(f'Specificity:{round(specificity_score(y_test,pred),3)}')
 print('================================================================================================')
 
 """
@@ -491,20 +482,24 @@ disp.plot()
 plt.title('After Grid Search Random Forest Confusion Matrix')
 plt.show()
 
+
 """
 ======================
 Bagging Random Forest
 ======================
 """
 print('================================================================================================')
-bc = BaggingClassifier(RandomForestClassifier(n_estimators=10),n_jobs=n_jobs)
+bc = BaggingClassifier(RandomForestClassifier(n_jobs=n_jobs),n_jobs=n_jobs)
 bc.fit(X_train,y_train)
 pred = bc.predict(X_test)
-
 print('Bagging Random Forest')
 print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
 print(f'F1: {round(f1_score(y_test,pred),3)}')
-print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
+print(f'Precision: {round(precision_score(y_test,pred),3)}')
+print(f'Recall: {round(recall_score(y_test,pred),3)}')
+print(f'Specificity:{round(specificity_score(y_test,pred),3)}')
+print('================================================================================================')
+
 
 """
 ========================
@@ -526,18 +521,21 @@ Multi Layered Perceptron
 """
 print('================================================================================================')
 
-mlp = MLPClassifier(verbose=True,activation='identity',shuffle=True)
+mlp = MLPClassifier(verbose=False,activation='identity',shuffle=True)
 mlp.fit(X_train,y_train)
 pred = mlp.predict(X_test)
 print('========================')
 print('Multilayer Perceptron')
 print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
 print(f'F1: {round(f1_score(y_test,pred),3)}')
-print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
+print(f'Precision: {round(precision_score(y_test,pred),3)}')
+print(f'Recall: {round(recall_score(y_test,pred),3)}')
+print(f'Specificity:{round(specificity_score(y_test,pred),3)}')
+print('================================================================================================')
 
 """
 ================
-Confusion Matrix
+Confusion Matrix MLP
 ================
 """
 matrix = confusion_matrix(y_test, pred)
@@ -547,30 +545,11 @@ plt.title('Multi Layered Perceptron Confusion Matrix')
 plt.show()
 
 """
-param_grid = {'activation':['identity', 'logistic', 'tanh', 'relu'],'solver':['lbfgs', 'sgd', 'adam']}
-MLP_GRID = GridSearchCV(MLPClassifier(),param_grid,verbose=1,
-                      n_jobs=n_jobs,scoring='accuracy',cv=tscv)
-
-MLP_GRID.fit(X,y.ravel())
-mlp_best = MLP_GRID.best_params_
-print(mlp_best)
-
-mlp = MLPClassifier(activation=mlp_best['activation'],solver=mlp_best['solver'])
-mlp.fit(X_train,y_train)
-pred = mlp.predict(X_test)
-print('========================')
-print('After Grid Search MLP')
-print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
-print(f'F1: {round(f1_score(y_test,pred),3)}')
-print(f'F1 with macro avg: {round(f1_score(y_test,pred, average="macro"),3)}')
-print('================================================================================================')
-"""
-
-"""
 ===========
 ROC CURVES
 ===========
 """
+
 "Log reg"
 y_proba_lg = lg.predict_proba(X_test)[::,-1]
 lg_fpr,lg_tpr,_ = metrics.roc_curve(y_test,y_proba_lg)
@@ -584,7 +563,7 @@ dt_fpr,dt_tpr,_ = metrics.roc_curve(y_test,y_proba_dt)
 auc_dt = metrics.roc_auc_score(y_test,y_proba_dt)
 plt.plot(dt_fpr,dt_tpr, label = f'Decision Tree AUC = {auc_dt:.3f}')
 
-'''"Decision Tree pre pruned"
+"Decision Tree pre pruned"
 y_proba_dt_pre = dt_pre.predict_proba(X_test)[::,-1]
 dt_pre_fpr,dt_pre_tpr,_ = metrics.roc_curve(y_test,y_proba_dt_pre)
 auc_dt_pre = metrics.roc_auc_score(y_test,y_proba_dt_pre)
@@ -595,13 +574,19 @@ y_proba_dt_post = dt_post.predict_proba(X_test)[::,-1]
 dt_post_fpr,dt_post_tpr,_ = metrics.roc_curve(y_test,y_proba_dt_post)
 auc_dt_post = metrics.roc_auc_score(y_test,y_proba_dt_post)
 plt.plot(dt_post_fpr,dt_post_tpr, label = f'Post-Pruned-Decision Tree AUC = {auc_dt_post:.3f}')
-'''
 
 "KNN"
 y_proba_knn = knn.predict_proba(X_test)[::,-1]
 knn_fpr,knn_tpr,_ = metrics.roc_curve(y_test,y_proba_knn)
 auc_knn = metrics.roc_auc_score(y_test,y_proba_knn)
 plt.plot(knn_fpr,knn_tpr, label = f'KNN AUC = {auc_knn:.3f}')
+
+'KNN Grid'
+y_proba_svm = knn_grid.predict_proba(X_test)[::,-1]
+svm_fpr,svm_tpr,_ = metrics.roc_curve(y_test,y_proba_svm)
+auc_svm = metrics.roc_auc_score(y_test,y_proba_svm)
+plt.plot(svm_fpr,svm_tpr, label = f'KNN GRID AUC = {auc_svm:.3f}')
+
 
 "Naive Bayes"
 y_proba_nb = nb.predict_proba(X_test)[::,-1]
@@ -611,11 +596,16 @@ plt.plot(nb_fpr,nb_tpr, label = f'Naive Bayes AUC = {auc_nb:.3f}')
 
 
 "SVM"
-"""y_proba_svm = svm.predict_proba(X_test)[::,-1]
+y_proba_svm = svm.predict_proba(X_test)[::,-1]
 svm_fpr,svm_tpr,_ = metrics.roc_curve(y_test,y_proba_svm)
 auc_svm = metrics.roc_auc_score(y_test,y_proba_svm)
 plt.plot(svm_fpr,svm_tpr, label = f'SVM AUC = {auc_svm:.3f}')
-"""
+
+"SVM Grid"
+y_proba_svm = best_svm.predict_proba(X_test)[::,-1]
+svm_fpr,svm_tpr,_ = metrics.roc_curve(y_test,y_proba_svm)
+auc_svm = metrics.roc_auc_score(y_test,y_proba_svm)
+plt.plot(svm_fpr,svm_tpr, label = f'Grid search SVM AUC = {auc_svm:.3f}')
 
 "Random Forest"
 y_proba_rf = rf.predict_proba(X_test)[::,-1]
@@ -623,17 +613,19 @@ rf_fpr,rf_tpr,_ = metrics.roc_curve(y_test,y_proba_rf)
 auc_rf = metrics.roc_auc_score(y_test,y_proba_rf)
 plt.plot(rf_fpr,rf_tpr, label = f'Random Forest AUC = {auc_rf:.3f}')
 
+
 'Random Forest Grid search'
 y_proba_rf = rf_grid.predict_proba(X_test)[::,-1]
 rf_fpr,rf_tpr,_ = metrics.roc_curve(y_test,y_proba_rf)
 auc_rf = metrics.roc_auc_score(y_test,y_proba_rf)
 plt.plot(rf_fpr,rf_tpr, label = f' Grid Search Random Forest AUC = {auc_rf:.3f}')
 
+
 'Bagging Classifier'
 y_proba_rf = bc.predict_proba(X_test)[::,-1]
 rf_fpr,rf_tpr,_ = metrics.roc_curve(y_test,y_proba_rf)
 auc_rf = metrics.roc_auc_score(y_test,y_proba_rf)
-plt.plot(rf_fpr,rf_tpr, label = f'Random Forest AUC = {auc_rf:.3f}')
+plt.plot(rf_fpr,rf_tpr, label = f'Bagging AUC = {auc_rf:.3f}')
 
 
 "MLP"
