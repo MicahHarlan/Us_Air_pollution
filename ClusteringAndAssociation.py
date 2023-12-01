@@ -253,7 +253,7 @@ kmeans = KMeans(n_clusters=k)
 y_km = kmeans.fit_predict(X)
 
 for i in range(k):
-    plt.scatter(X[y_km == i,0],X[y_km == i,1],label=f'Cluster {i+1}',s=10)
+    plt.scatter(X[y_km == i,0],X[y_km == i,1],label=f'Cluster {i+1}',s=0.7)
 
 plt.scatter(kmeans.cluster_centers_[:,0],kmeans.cluster_centers_[:,1],marker='*')
 plt.legend()
