@@ -1,41 +1,41 @@
+import gc
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn import metrics
-
-'''"DELETE"
-from sklearnex import patch_sklearn
-patch_sklearn()'''
-
 from sklearn.neural_network import MLPClassifier
 from sklearn.naive_bayes import GaussianNB
-from sklearn.naive_bayes import CategoricalNB
-from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler,LabelEncoder
 from sklearn.model_selection import train_test_split,TimeSeriesSplit,GridSearchCV
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score,f1_score,classification_report,ConfusionMatrixDisplay,confusion_matrix,recall_score,precision_score
+from sklearn.metrics import accuracy_score,f1_score,ConfusionMatrixDisplay,confusion_matrix,recall_score,precision_score
 from sklearn.linear_model import LogisticRegression
-from prettytable import PrettyTable
-from sklearn.pipeline import make_pipeline
-from sklearn.svm import SVC,LinearSVC
+from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import BaggingClassifier
 from imblearn.metrics import specificity_score
+from imblearn.over_sampling import ADASYN
 import warnings
+
+'Starting Time'
+import time
+start = time.time()
+
 warnings.filterwarnings("ignore")
 n_jobs = -1
+
 shuffle = False
-tscv = TimeSeriesSplit(n_splits=5)
+gc.enable()
+
+tscv = TimeSeriesSplit(n_splits=12)
 df = (pd.read_csv('classification.csv'))
 df['classification'] = np.select([df['Y'].between(0,50),
                                  df['Y'].between(51,300)]
                                 ,['Healthy','Unhealthy'])
 
 y = df['classification']
-
 features_list = ['Year','CO Mean', 'SO2 Mean', 'NO2 Mean', 'NO2 1st Max Hour', 'AQI',
        'O3_AQI_label','days_since_start']
 df.drop(columns=[col for col in df.keys() if col not in features_list],inplace=True)
@@ -92,7 +92,6 @@ plt.title('Countplot of Target')
 plt.tight_layout()
 plt.show()
 
-from imblearn.over_sampling import ADASYN
 oversample = ADASYN(sampling_strategy='auto',n_jobs=n_jobs)#n_neighbors=5
 X, y = oversample.fit_resample(X, y)
 X['y_class'] = y
@@ -127,8 +126,10 @@ print(f'ACCURACY: {round(accuracy_score(y_test,pred),3)}')
 print(f'F1: {round(f1_score(y_test,pred),3)}')
 print(f'Precision: {round(precision_score(y_test,pred),3)}')
 print(f'Recall: {round(recall_score(y_test,pred),3)}')
-print(f'Specificity:{specificity_score(y_test,pred)}')
+print(f'Specificity:{round(specificity_score(y_test,pred),3)}')
 print('================================================================================================')
+y_proba_lg = lg.predict_proba(X_test)[::,-1]
+
 
 """
 =================|
@@ -140,7 +141,7 @@ disp = ConfusionMatrixDisplay(confusion_matrix=matrix,display_labels=lg.classes_
 disp.plot()
 plt.title('Logisitic Regression Confusion Matrix')
 plt.show()
-
+del lg
 
 """
 ====================
@@ -160,7 +161,7 @@ print(f'Precision: {round(precision_score(y_test,pred),3)}')
 print(f'Recall: {round(recall_score(y_test,pred),3)}')
 print(f'Specificity:{round(specificity_score(y_test,pred),3)}')
 print('================================================================================================')
-
+y_proba_dt = dt.predict_proba(X_test)[::,-1]
 
 """
 ================
@@ -172,7 +173,7 @@ disp = ConfusionMatrixDisplay(confusion_matrix=matrix,display_labels=dt.classes_
 disp.plot()
 plt.title('Decision Tree Confusion Matrix')
 plt.show()
-
+del dt
 
 param_grid = {'criterion':['gini', 'entropy','log_loss'],
               'splitter':['best', 'random'],
@@ -185,7 +186,7 @@ param_grid = {'criterion':['gini', 'entropy','log_loss'],
 
 dt_grid = GridSearchCV(DecisionTreeClassifier(),
                        cv=tscv,param_grid=param_grid,n_jobs=n_jobs,verbose=1)
-                       
+
 dt_grid.fit(X,y.ravel())
 dt_grid_result = dt_grid.best_params_
 print(dt_grid.best_params_)
@@ -206,6 +207,7 @@ print(f'Precision: {round(precision_score(y_test,pred),3)}')
 print(f'Recall: {round(recall_score(y_test,pred),3)}')
 print(f'Specificity:{round(specificity_score(y_test,pred),3)}')
 print('================================================================================================')
+y_proba_dt_pre = dt_pre.predict_proba(X_test)[::,-1]
 
 """
 ====================
@@ -215,7 +217,7 @@ Confusion Matrix pre
 matrix = confusion_matrix(y_test, pred)
 disp = ConfusionMatrixDisplay(confusion_matrix=matrix,display_labels=dt_pre.classes_)
 disp.plot()
-plt.title('Decision Tree Confusion Matrix')
+plt.title('Pre Pruned Decision Tree Confusion Matrix')
 plt.show()
 
 param_grid = {'ccp_alpha':np.arange(0,.05,.001)}
@@ -236,6 +238,7 @@ print(f'Precision: {round(precision_score(y_test,pred),3)}')
 print(f'Recall: {round(recall_score(y_test,pred),3)}')
 print(f'Specificity:{round(specificity_score(y_test,pred),3)}')
 print('================================================================================================')
+y_proba_dt_post = dt_post.predict_proba(X_test)[::,-1]
 
 """
 ====================
@@ -247,7 +250,8 @@ disp = ConfusionMatrixDisplay(confusion_matrix=matrix,display_labels=dt_post.cla
 disp.plot()
 plt.title('Post Pruned Decision Tree Confusion Matrix')
 plt.show()
-
+del dt_pre
+del dt_post
 
 """
 ====================
@@ -265,7 +269,7 @@ print(f'Precision: {round(precision_score(y_test,pred),3)}')
 print(f'Recall: {round(recall_score(y_test,pred),3)}')
 print(f'Specificity:{round(specificity_score(y_test,pred),3)}')
 print('================================================================================================')
-
+y_proba_knn = knn.predict_proba(X_test)[::,-1]
 """
 ===================
 Confusion Matrix knn
@@ -277,6 +281,7 @@ disp.plot()
 plt.title('KNN Confusion Matrix')
 plt.show()
 
+del knn
 
 
 param_grid = {'weights':['uniform', 'distance'],
@@ -306,7 +311,9 @@ print(knn_best)
 knn_grid = KNeighborsClassifier(n_jobs=n_jobs,n_neighbors=knn_best['n_neighbors']
                            ,weights=knn_best2['weights'],algorithm=knn_best2['algorithm'],p=knn_best3['p'])
 knn_grid.fit(X_train,y_train)
-pred = knn.predict(X_test)
+pred = knn_grid.predict(X_test)
+
+y_proba_knn_grid = knn_grid.predict_proba(X_test)[::,-1]
 
 print('========================')
 print('After Grid Search KNN')
@@ -316,6 +323,18 @@ print(f'Precision: {round(precision_score(y_test,pred),3)}')
 print(f'Recall: {round(recall_score(y_test,pred),3)}')
 print(f'Specificity:{round(specificity_score(y_test,pred),3)}')
 print('================================================================================================')
+
+"""
+===================
+Confusion Matrix knn
+====================
+"""
+matrix = confusion_matrix(y_test, pred)
+disp = ConfusionMatrixDisplay(confusion_matrix=matrix,display_labels=knn_grid.classes_)
+disp.plot()
+plt.title('Grid Searched KNN Matrix')
+plt.show()
+del knn_grid
 
 
 """
@@ -334,6 +353,7 @@ print(f'Precision: {round(precision_score(y_test,pred),3)}')
 print(f'Recall: {round(recall_score(y_test,pred),3)}')
 print(f'Specificity:{round(specificity_score(y_test,pred),3)}')
 print('================================================================================================')
+y_proba_svm = svm.predict_proba(X_test)[::,-1]
 
 """
 ================
@@ -345,7 +365,7 @@ disp = ConfusionMatrixDisplay(confusion_matrix=matrix,display_labels=svm.classes
 disp.plot()
 plt.title('SVM Confusion Matrix')
 plt.show()
-
+del svm
 
 param_grid = {'kernel':["linear", "poly", "rbf", "sigmoid"]}
 SVM_GRID = GridSearchCV(SVC(),param_grid,verbose=0,
@@ -365,6 +385,7 @@ print(f'Precision: {round(precision_score(y_test,pred),3)}')
 print(f'Recall: {round(recall_score(y_test,pred),3)}')
 print(f'Specificity:{round(specificity_score(y_test,pred),3)}')
 print('================================================================================================')
+y_proba_svm_grid = best_svm.predict_proba(X_test)[::,-1]
 
 """
 ================================
@@ -377,9 +398,8 @@ disp.plot()
 plt.title('Grid-Searched SVM Confusion Matrix')
 plt.show()
 print('================================================================================================')
-
+del best_svm
 print('================================================================================================')
-
 
 """
 ====================
@@ -391,7 +411,7 @@ print('Gaussian NAIVE BAYES')
 nb = GaussianNB()
 nb.fit(X_train,y_train)
 pred = nb.predict(X_test)
-
+y_proba_nb = nb.predict_proba(X_test)[::,-1]
 """
 ===================
 Confusion Matrix nb
@@ -409,7 +429,7 @@ print(f'Precision: {round(precision_score(y_test,pred),3)}')
 print(f'Recall: {round(recall_score(y_test,pred),3)}')
 print(f'Specificity:{round(specificity_score(y_test,pred),3)}')
 print('================================================================================================')
-
+del nb
 
 
 """
@@ -428,7 +448,7 @@ print(f'Precision: {round(precision_score(y_test,pred),3)}')
 print(f'Recall: {round(recall_score(y_test,pred),3)}')
 print(f'Specificity:{round(specificity_score(y_test,pred),3)}')
 print('================================================================================================')
-
+y_proba_rf = rf.predict_proba(X_test)[::,-1]
 """
 ===================
 Confusion Matrix rf
@@ -439,6 +459,7 @@ disp = ConfusionMatrixDisplay(confusion_matrix=matrix,display_labels=rf.classes_
 disp.plot()
 plt.title('Random Forest Confusion Matrix')
 plt.show()
+del rf
 
 param_grid = {'criterion':['gini', 'entropy','log_loss'],
               'max_features':['auto', 'sqrt', 'log2'],
@@ -470,17 +491,18 @@ print(f'Precision: {round(precision_score(y_test,pred),3)}')
 print(f'Recall: {round(recall_score(y_test,pred),3)}')
 print(f'Specificity:{round(specificity_score(y_test,pred),3)}')
 print('================================================================================================')
-
+y_proba_rf_grid = rf_grid.predict_proba(X_test)[::,-1]
 """
 ================
 Confusion Matrix after grid rf
 ================
 """
 matrix = confusion_matrix(y_test, pred)
-disp = ConfusionMatrixDisplay(confusion_matrix=matrix,display_labels=rf.classes_)
+disp = ConfusionMatrixDisplay(confusion_matrix=matrix,display_labels=rf_grid.classes_)
 disp.plot()
-plt.title('After Grid Search Random Forest Confusion Matrix')
+plt.title('Grid Search Random Forest Confusion Matrix')
 plt.show()
+del rf_grid
 
 
 """
@@ -499,7 +521,7 @@ print(f'Precision: {round(precision_score(y_test,pred),3)}')
 print(f'Recall: {round(recall_score(y_test,pred),3)}')
 print(f'Specificity:{round(specificity_score(y_test,pred),3)}')
 print('================================================================================================')
-
+y_proba_bag = bc.predict_proba(X_test)[::,-1]
 
 """
 ========================
@@ -512,7 +534,7 @@ disp.plot()
 plt.title('Bagging Random Forest Confusion Matrix')
 plt.show()
 print('================================================================================================')
-
+del bc
 
 """
 ====================
@@ -532,6 +554,7 @@ print(f'Precision: {round(precision_score(y_test,pred),3)}')
 print(f'Recall: {round(recall_score(y_test,pred),3)}')
 print(f'Specificity:{round(specificity_score(y_test,pred),3)}')
 print('================================================================================================')
+y_proba_mlp = mlp.predict_proba(X_test)[::,-1]
 
 """
 ================
@@ -549,94 +572,98 @@ plt.show()
 ROC CURVES
 ===========
 """
-
+plt.figure(figsize=(12,8))
 "Log reg"
-y_proba_lg = lg.predict_proba(X_test)[::,-1]
+'y_proba_lg = lg.predict_proba(X_test)[::,-1]'
 lg_fpr,lg_tpr,_ = metrics.roc_curve(y_test,y_proba_lg)
 auc_lg = metrics.roc_auc_score(y_test,y_proba_lg)
 plt.plot(lg_fpr,lg_tpr, label = f'Log Reg AUC = {auc_lg:.3f}')
 plt.plot(lg_fpr,lg_fpr)
 
 "Decision Tree"
-y_proba_dt = dt.predict_proba(X_test)[::,-1]
+'y_proba_dt = dt.predict_proba(X_test)[::,-1]'
 dt_fpr,dt_tpr,_ = metrics.roc_curve(y_test,y_proba_dt)
 auc_dt = metrics.roc_auc_score(y_test,y_proba_dt)
 plt.plot(dt_fpr,dt_tpr, label = f'Decision Tree AUC = {auc_dt:.3f}')
 
 "Decision Tree pre pruned"
-y_proba_dt_pre = dt_pre.predict_proba(X_test)[::,-1]
 dt_pre_fpr,dt_pre_tpr,_ = metrics.roc_curve(y_test,y_proba_dt_pre)
 auc_dt_pre = metrics.roc_auc_score(y_test,y_proba_dt_pre)
 plt.plot(dt_pre_fpr,dt_pre_tpr, label = f'Pre-Pruned-Decision Tree AUC = {auc_dt_pre:.3f}')
 
 "Post pruned Decision Tree"
-y_proba_dt_post = dt_post.predict_proba(X_test)[::,-1]
+'y_proba_dt_post = dt_post.predict_proba(X_test)[::,-1]'
 dt_post_fpr,dt_post_tpr,_ = metrics.roc_curve(y_test,y_proba_dt_post)
 auc_dt_post = metrics.roc_auc_score(y_test,y_proba_dt_post)
 plt.plot(dt_post_fpr,dt_post_tpr, label = f'Post-Pruned-Decision Tree AUC = {auc_dt_post:.3f}')
 
 "KNN"
-y_proba_knn = knn.predict_proba(X_test)[::,-1]
+'y_proba_knn = knn.predict_proba(X_test)[::,-1]'
 knn_fpr,knn_tpr,_ = metrics.roc_curve(y_test,y_proba_knn)
 auc_knn = metrics.roc_auc_score(y_test,y_proba_knn)
 plt.plot(knn_fpr,knn_tpr, label = f'KNN AUC = {auc_knn:.3f}')
 
 'KNN Grid'
-y_proba_svm = knn_grid.predict_proba(X_test)[::,-1]
-svm_fpr,svm_tpr,_ = metrics.roc_curve(y_test,y_proba_svm)
-auc_svm = metrics.roc_auc_score(y_test,y_proba_svm)
+'y_proba_knn_grid = knn_grid.predict_proba(X_test)[::,-1]'
+svm_fpr,svm_tpr,_ = metrics.roc_curve(y_test,y_proba_knn_grid)
+auc_svm = metrics.roc_auc_score(y_test,y_proba_knn_grid)
 plt.plot(svm_fpr,svm_tpr, label = f'KNN GRID AUC = {auc_svm:.3f}')
 
 
 "Naive Bayes"
-y_proba_nb = nb.predict_proba(X_test)[::,-1]
+'y_proba_nb = nb.predict_proba(X_test)[::,-1]'
 nb_fpr,nb_tpr,_ = metrics.roc_curve(y_test,y_proba_nb)
 auc_nb = metrics.roc_auc_score(y_test,y_proba_nb)
 plt.plot(nb_fpr,nb_tpr, label = f'Naive Bayes AUC = {auc_nb:.3f}')
 
 
 "SVM"
-y_proba_svm = svm.predict_proba(X_test)[::,-1]
+'y_proba_svm = svm.predict_proba(X_test)[::,-1]'
 svm_fpr,svm_tpr,_ = metrics.roc_curve(y_test,y_proba_svm)
 auc_svm = metrics.roc_auc_score(y_test,y_proba_svm)
 plt.plot(svm_fpr,svm_tpr, label = f'SVM AUC = {auc_svm:.3f}')
 
 "SVM Grid"
-y_proba_svm = best_svm.predict_proba(X_test)[::,-1]
-svm_fpr,svm_tpr,_ = metrics.roc_curve(y_test,y_proba_svm)
-auc_svm = metrics.roc_auc_score(y_test,y_proba_svm)
+'y_proba_svm_grid = best_svm.predict_proba(X_test)[::,-1]'
+svm_fpr,svm_tpr,_ = metrics.roc_curve(y_test,y_proba_svm_grid)
+auc_svm = metrics.roc_auc_score(y_test,y_proba_svm_grid)
 plt.plot(svm_fpr,svm_tpr, label = f'Grid search SVM AUC = {auc_svm:.3f}')
 
 "Random Forest"
-y_proba_rf = rf.predict_proba(X_test)[::,-1]
+'y_proba_rf = rf.predict_proba(X_test)[::,-1]'
 rf_fpr,rf_tpr,_ = metrics.roc_curve(y_test,y_proba_rf)
 auc_rf = metrics.roc_auc_score(y_test,y_proba_rf)
 plt.plot(rf_fpr,rf_tpr, label = f'Random Forest AUC = {auc_rf:.3f}')
 
 
 'Random Forest Grid search'
-y_proba_rf = rf_grid.predict_proba(X_test)[::,-1]
-rf_fpr,rf_tpr,_ = metrics.roc_curve(y_test,y_proba_rf)
-auc_rf = metrics.roc_auc_score(y_test,y_proba_rf)
+'y_proba_rf_grid = rf_grid.predict_proba(X_test)[::,-1]'
+rf_fpr,rf_tpr,_ = metrics.roc_curve(y_test,y_proba_rf_grid)
+auc_rf = metrics.roc_auc_score(y_test,y_proba_rf_grid)
 plt.plot(rf_fpr,rf_tpr, label = f' Grid Search Random Forest AUC = {auc_rf:.3f}')
 
 
 'Bagging Classifier'
-y_proba_rf = bc.predict_proba(X_test)[::,-1]
-rf_fpr,rf_tpr,_ = metrics.roc_curve(y_test,y_proba_rf)
-auc_rf = metrics.roc_auc_score(y_test,y_proba_rf)
+'y_proba_bag = bc.predict_proba(X_test)[::,-1]'
+rf_fpr,rf_tpr,_ = metrics.roc_curve(y_test,y_proba_bag)
+auc_rf = metrics.roc_auc_score(y_test,y_proba_bag)
 plt.plot(rf_fpr,rf_tpr, label = f'Bagging AUC = {auc_rf:.3f}')
 
 
 "MLP"
-y_proba_mlp = mlp.predict_proba(X_test)[::,-1]
+'y_proba_mlp = mlp.predict_proba(X_test)[::,-1]'
 mlp_fpr,mlp_tpr,_ = metrics.roc_curve(y_test,y_proba_mlp)
 auc_mlp = metrics.roc_auc_score(y_test,y_proba_mlp)
 plt.plot(mlp_fpr,mlp_tpr, label = f'MLP AUC = {auc_mlp:.3f}')
+
 plt.grid()
 plt.xlabel('FPR')
 plt.ylabel('TPR')
 plt.title('AUC CURVE')
-
-plt.legend(loc=4)
+plt.legend(bbox_to_anchor=(1.04,0.5), loc='center left')
+plt.tight_layout()
 plt.show()
+
+end = time.time()
+print('================================================================================================')
+print(f'Elapsed Time: {end - start}')
