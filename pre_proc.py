@@ -161,11 +161,12 @@ df['classification'] = np.select([df['Y'].between(0,50),
 Setting Date
 """
 shuffle = False
-df = df[(df['Date'] >= '2017-01-01')]
-df['days_since_start'] = (df['Date'] - pd.to_datetime('2017-01-01')).dt.days
+df = df[(df['Date'] >= '2016-01-01')]
+df['days_since_start'] = (df['Date'] - pd.to_datetime('2016-01-01')).dt.days
 df.reset_index(inplace=True,drop=True)
 #df.to_csv('classification.csv',index=False)
 print(len(df))
+
 """
 ========================
 Dimensionality Reduction

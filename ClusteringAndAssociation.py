@@ -105,8 +105,8 @@ df['SO2_AQI_label'] = np.select([df['SO2 AQI'].between(0,50),
 Setting Date
 """
 shuffle = False
-df = df[(df['Date'] >= '2015-01-01')]
-df['days_since_start'] = (df['Date'] - pd.to_datetime('2015-01-01')).dt.days
+df = df[(df['Date'] >= '2016-01-01')]
+df['days_since_start'] = (df['Date'] - pd.to_datetime('2016-01-01')).dt.days
 df.reset_index(inplace=True,drop=True)
 
 print(len(df))
@@ -165,15 +165,11 @@ apriori_x = X[apriori_labels]
 X.drop(columns =apriori_labels,inplace=True,axis=1)
 X.drop(columns=['County','City'],inplace=True,axis=1)
 copy_of_x = X.copy()
-print(X.keys())
-
 
 
 copy = X.copy()
 X2 = X.copy()
 X3 = X.copy()
-print(len(X.keys()))
-
 pca = PCA()
 principalComponents = pca.fit_transform(X)
 PCA_components = pd.DataFrame(principalComponents)
@@ -209,7 +205,6 @@ print(df_ar.to_string())
 Elbow Method Within cluster Sum of Squared Errors (WSS)
 ========================================================
 """
-
 sse = {}
 for k in range(1, 30):
     kmeans = KMeans(n_clusters=k).fit(PCA_components.iloc[:,:2])
@@ -221,6 +216,7 @@ plt.plot(list(sse.keys()), list(sse.values()))
 plt.xlabel("Number of cluster")
 plt.ylabel("SSE")
 plt.tight_layout()
+plt.title('Elbow Method')
 plt.show()
 
 """
@@ -228,7 +224,7 @@ plt.show()
 Silhouette Method for selection of K
 ========================================================
 """
-'''sil = []
+sil = []
 kmax = 20
 for k in range(2, kmax+1):
     kmeans = KMeans(n_clusters=k)
@@ -244,7 +240,7 @@ plt.ylabel('Silhouette score')
 plt.title('Silhouette Method')
 plt.tight_layout()
 plt.show()
-'''
+
 k = 6
 X = copy.copy()
 pca = PCA(n_components=2)

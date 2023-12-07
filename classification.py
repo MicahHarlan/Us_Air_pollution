@@ -36,7 +36,7 @@ df['classification'] = np.select([df['Y'].between(0,50),
                                 ,['Healthy','Unhealthy'])
 
 y = df['classification']
-features_list = ['Year','CO Mean', 'SO2 Mean', 'NO2 Mean', 'NO2 1st Max Hour', 'AQI',
+features_list = ['Year', 'NO2 Mean', 'NO2 1st Max Hour', 'AQI',
        'O3_AQI_label','days_since_start']
 df.drop(columns=[col for col in df.keys() if col not in features_list],inplace=True)
 X = df.copy()
@@ -46,14 +46,6 @@ X = df.copy()
 Transformations
 =====================
 """
-co_mean_std = StandardScaler()
-co_mean_std.fit(X['CO Mean'].to_numpy().reshape(len(X['CO Mean']), -1))
-X['CO Mean'] = co_mean_std.fit_transform(X['CO Mean'].to_numpy().reshape(len(X['CO Mean']),-1))
-
-so2_mean_std = StandardScaler()
-so2_mean_std.fit(X['SO2 Mean'].to_numpy().reshape(len(X['CO Mean']), -1))
-X['SO2 Mean'] = so2_mean_std.fit_transform(X['SO2 Mean'].to_numpy().reshape(len(X['CO Mean']),-1))
-
 no2_mean_std = StandardScaler()
 no2_mean_std.fit(X['NO2 Mean'].to_numpy().reshape(len(X['CO Mean']), -1))
 X['NO2 Mean'] = no2_mean_std.fit_transform(X['NO2 Mean'].to_numpy().reshape(len(X['CO Mean']),-1))
