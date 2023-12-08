@@ -304,9 +304,22 @@ Features Covariance Matrix
 """
 temp = df[numerical]
 plt.figure(figsize=(12,12))
-mask = np.triu(np.ones_like(temp.cov(),dtype=bool),k=2)
+mask = np.triu(np.ones_like(temp.cov(),dtype=bool),k=1)
 sns.heatmap(temp.cov(), annot=True, cmap='coolwarm', fmt=".2f",mask=mask)
 plt.title('Covariance Matrix Heatmap')
+plt.tight_layout()
+plt.show()
+"""
+========================================
+Features Covariance Matrix days_since_start removed
+========================================
+"""
+temp = df[numerical]
+temp.drop('days_since_start',axis=1,inplace=True)
+plt.figure(figsize=(12,12))
+mask = np.triu(np.ones_like(temp.cov(),dtype=bool),k=1)
+sns.heatmap(temp.cov(), annot=True, cmap='coolwarm', fmt=".2f",mask=mask)
+plt.title('Covariance Matrix Heatmap days_since_start removed')
 plt.tight_layout()
 plt.show()
 
@@ -768,7 +781,7 @@ plt.title('Countplot of Target')
 plt.tight_layout()
 plt.show()
 X_train,X_test,y_train,y_test = train_test_split(X,y,test_size=.2 ,shuffle=shuffle)
-tscv = TimeSeriesSplit(n_splits=12)
+
 
 """
 ====================
@@ -994,7 +1007,6 @@ print(f'Precision: {round(precision_score(y_test,pred),3)}')
 print(f'Recall: {round(recall_score(y_test,pred),3)}')
 print(f'Specificity:{round(specificity_score(y_test,pred),3)}')
 print(f'Cross Val Score: {round(KNN_GRID.best_score_,3)}')
-
 print('================================================================================================')
 
 """
